@@ -7,7 +7,7 @@
   stdenv = pkgs.stdenv;
   cfg = config.services.wolog;
   toml = pkgs.formats.toml {};
-  default_url = "postgres://localhost/wolog?host=/run/postgresql/.s.PGSQL.5432";
+  default_url = "postgres://localhost/wolog?host=/run/postgresql";
   path2derivation = path: pkgs.runCommand (builtins.toString path) {} ''cp -r ${path} $out'';
   inherit (lib) mkEnableOption mkPackageOption mkIf mkOption types optionalAttrs;
 in {
