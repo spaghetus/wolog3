@@ -180,9 +180,11 @@ async fn update_posts(db: &Pool<Postgres>, cfg: Arc<Config>) -> Result<(), sqlx:
             .map(|r| (r.path, r.updated))
             .collect::<HashMap<_, _>>()
             .into();
+    let root: Arc<str> = cfg.content_root.to_str().unwrap().into();
     let (files, all_files): (HashMap<_, _>, HashSet<_>) = tokio::task::spawn_blocking({
         let posts = posts.clone();
         let cfg = cfg.clone();
+        let root = root.clone();
         move || {
             let mut files = HashSet::new();
             (
@@ -206,7 +208,12 @@ async fn update_posts(db: &Pool<Postgres>, cfg: Arc<Config>) -> Result<(), sqlx:
                             .map(|f| (f.to_string(), DateTime::<Utc>::from(modified)))
                     })
                     .inspect(|(path, _)| {
-                        files.insert(path.to_string());
+                        files.insert(
+                            path.trim_start_matches(&*root)
+                                .trim_start_matches(['.', '/'])
+                                .trim_end_matches(".md")
+                                .to_string(),
+                        );
                     })
                     .filter(|(path, updated)| {
                         posts
@@ -221,8 +228,8 @@ async fn update_posts(db: &Pool<Postgres>, cfg: Arc<Config>) -> Result<(), sqlx:
     })
     .await
     .expect("Failed to search for files");
+    dbg!(&all_files);
     let mut group = tokio::task::JoinSet::<Option<()>>::new();
-    let root: Arc<str> = cfg.content_root.to_str().unwrap().into();
     for (path, updated) in files {
         let db = db.clone();
         let cfg = cfg.clone();
