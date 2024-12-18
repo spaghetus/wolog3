@@ -194,7 +194,7 @@ in {
         wolog.members = [cfg.user];
       };
 
-      services.postgres = mkIf (cfg.user == "wolog" && cfg.db-url == "postgres://localhost/wolog") {
+      services.postgresql = mkIf (cfg.user == "wolog" && cfg.db-url == "postgres://localhost/wolog") {
         enable = true;
         ensureUsers = [
           {
