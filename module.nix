@@ -21,10 +21,16 @@ in {
       '';
     };
 
-    db-path = mkOption {
+    db-url = mkOption {
       type = types.str;
-      default = "/var/lib/wolog.db";
-      description = "Path to the Wolog's database.";
+      default = "postgres://localhost/wolog";
+      description = "URL of the Wolog's database.";
+    };
+
+    enableWebmention = mkOption {
+      type = types.bool;
+      default = true;
+      description = "Should we send and receive WebMentions?";
     };
 
     address = mkOption {
@@ -35,9 +41,15 @@ in {
       '';
     };
 
+    origin = mkOption {
+      type = types.str;
+      default = "https://wolo.dev";
+      description = "Origin to use for webmention";
+    };
+
     articlesDir = mkOption {
       type = types.str;
-      default = "/var/lib/wolog/posts";
+      default = "/var/lib/wolog/post";
       description = ''
         The directory where the wolog reads its posts.
       '';
@@ -67,6 +79,14 @@ in {
       '';
     };
 
+    assetsDir = mkOption {
+      type = types.path;
+      default = "/var/lib/wolog/post/assets";
+      description = ''
+        The directory where the wolog reads its post assets.
+      '';
+    };
+
     user = mkOption {
       type = types.str;
       default = "wolog";
@@ -79,15 +99,7 @@ in {
       description = "Group account under which the wolog runs.";
     };
 
-    openFirewall = mkOption {
-      type = types.bool;
-      default = false;
-      description = ''
-        Open ports in the firewall for the wolog.
-      '';
-    };
-
-    preview = mkOption {
+    development = mkOption {
       type = types.bool;
       default = false;
       description = ''
@@ -123,9 +135,6 @@ in {
       installPhase = ''
         mkdir -p $out
         ln -s ${settings} $out/Rocket.toml
-        ln -s ${cfg.articlesDir} $out/articles
-        ln -s ${cfg.templatesDir} $out/templates
-        ln -s ${cfg.staticDir} $out/static
       '';
     };
     wolog = cfg.package + /bin/wolog;
@@ -139,7 +148,12 @@ in {
         path = [pkgs.pandoc];
         environment =
           {
-            DATABASE_URL = "sqlite:${config.services.wolog.db-path}/wolog.db";
+            DATABASE_URL = cfg.db-url;
+            CONTENT_ROOT = cfg.articlesDir;
+            STATIC_ROOT = cfg.staticDir;
+            ASSETS_ROOT = cfg.assetsDir;
+            TEMPLATES_ROOT = cfg.templatesDir;
+            ORIGIN = cfg.origin;
           }
           // mkIf cfg.preview {WOLOG_PREVIEW_NONREADY = "1";};
 
@@ -152,10 +166,18 @@ in {
           ExecStart = pkgs.writeScript "wolog-start" ''
             #!/bin/sh
             cd ${builtins.toString workdir}
-            ${wolog}
+            ${wolog} ${
+              if cfg.development
+              then "-d"
+              else ""
+            } ${
+              if cfg.enableWebmention
+              then "-W"
+              else ""
+            }
           '';
           Restart = "always";
-          BindReadOnlyPaths = "${cfg.articlesDir} ${cfg.templatesDir} ${cfg.staticDir} ${workdir}";
+          BindReadOnlyPaths = "${cfg.articlesDir} ${cfg.assetsDir} ${cfg.templatesDir} ${cfg.staticDir} ${workdir}";
           BindReadWritePaths = "${config.services.wolog.db-path}";
           ProtectHome = "tmpfs";
         };
@@ -163,12 +185,24 @@ in {
       users.users = optionalAttrs (cfg.user == "wolog") {
         wolog = {
           group = cfg.group;
+          home = "/var/lib/wolog";
           isSystemUser = true;
         };
       };
 
       users.groups = optionalAttrs (cfg.group == "wolog") {
         wolog.members = [cfg.user];
+      };
+
+      services.postgres = mkIf (cfg.user == "wolog" && cfg.db-url == "postgres://localhost/wolog") {
+        enable = true;
+        ensureUsers = [
+          {
+            name = "wolog";
+            ensureDBOwnership = true;
+          }
+        ];
+        ensureDatabases = ["wolog"];
       };
     };
 }
