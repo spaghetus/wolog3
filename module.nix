@@ -148,7 +148,7 @@ in {
 
         path = [pkgs.pandoc];
         environment = {
-          WOLOG_DATABASE_URL = cfg.db-url;
+          DATABASE_URL = cfg.db-url;
           WOLOG_CONTENT_ROOT = cfg.articlesDir;
           WOLOG_STATIC_ROOT = cfg.staticDir;
           WOLOG_ASSETS_ROOT = cfg.assetsDir;
