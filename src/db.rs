@@ -474,7 +474,7 @@ pub async fn search(
     search: &Search,
 ) -> Result<Vec<(String, ArticleMeta)>, sqlx::Error> {
     let result = query!(
-        r#"SELECT path, meta FROM posts
+        r#"SELECT path as "path!", meta as "meta!" FROM visible_posts
         WHERE path ^@ $1
         AND (meta->>'title') LIKE ('%'||$2||'%')
         AND (meta->'tags') @> $3
