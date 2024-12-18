@@ -148,12 +148,12 @@ in {
 
         path = [pkgs.pandoc];
         environment = {
-          DATABASE_URL = cfg.db-url;
-          CONTENT_ROOT = cfg.articlesDir;
-          STATIC_ROOT = cfg.staticDir;
-          ASSETS_ROOT = cfg.assetsDir;
-          TEMPLATES_ROOT = cfg.templatesDir;
-          ORIGIN = cfg.origin;
+          WOLOG_DATABASE_URL = cfg.db-url;
+          WOLOG_CONTENT_ROOT = cfg.articlesDir;
+          WOLOG_STATIC_ROOT = cfg.staticDir;
+          WOLOG_ASSETS_ROOT = cfg.assetsDir;
+          WOLOG_TEMPLATES_ROOT = cfg.templatesDir;
+          WOLOG_ORIGIN = cfg.origin;
         };
 
         serviceConfig = {
