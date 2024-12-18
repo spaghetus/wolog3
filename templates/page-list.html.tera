@@ -1,0 +1,119 @@
+{% extends "main.html.tera" %}
+
+{% block head %}
+<title>Search Results</title>
+<link rel="alternate"
+    href="/feed?{{ search_qs }}"
+    type="application/rss+xml"
+    title="RSS">
+{% endblock head %}
+
+{% block toc %}
+{% endblock toc %}
+
+{% block bodyprops %}
+typeof="Collection"
+{% endblock bodyprops %}
+
+{% block main %}
+<main>
+    <h1>Search Results</h1>
+    <section>
+        <h2>Search parameters</h2>
+        <form action="/search"
+            method="get">
+            <fieldset>
+                <legend>Features:</legend>
+                <label for="search_path">Search path:</label>
+                <input type="text"
+                    name="search_path"
+                    id="search_path"
+                    value="{{ search.search_path }}">
+                <br>
+                <label for="title_filter">Title:</label>
+                <input type="text"
+                    name="title_filter"
+                    id="title_filter"
+                    value="{{ search.title_filter | default (value = '') }}">
+                <br>
+                <label for="tag">Tags:</label>
+                <ul class="horizontal inline">
+                    {% for tag in tags %}
+                    <li>
+                        <input type="checkbox"
+                            name="tag"
+                            id="{{ tag }}"
+                            value="{{ tag }}"
+                            {% if search.tag is containing(tag) %}
+                            checked="checked"
+                            {% endif %}>
+                        <label for="{{ tag }}">#{{ tag }}</label>
+                    </li>
+                    {% endfor %}
+                </ul>
+                <br>
+            </fieldset>
+            <fieldset>
+                <legend>Time:</legend>
+                <label for="created_before">Created before:</label>
+                <input type="date"
+                    name="created_before"
+                    id="created_before"
+                    value="{{ search.created_before | default (value = '') }}">
+                <br>
+                <label for="created_after">Created after:</label>
+                <input type="date"
+                    name="created_after"
+                    id="created_after"
+                    value="{{ search.created_after | default (value = '') }}">
+                <br>
+                <label for="updated_before">Updated before:</label>
+                <input type="date"
+                    name="updated_before"
+                    id="updated_before"
+                    value="{{ search.updated_before | default (value = '') }} }}">
+                <br>
+                <label for="updated_after">Updated after:</label>
+                <input type="date"
+                    name="updated_after"
+                    id="updated_after"
+                    value="{{ search.updated_after | default (value = '') }} }}">
+                <br>
+            </fieldset>
+            <label for="limit">Limit</label>
+            <input type="number"
+                name="limit"
+                id="limit"
+                min="0"
+                value="{{ search.limit | default (value = '32') }}">
+            <br>
+            <label for="sort_type">Sort type:</label>
+            <ul class="horizontal inline">
+                {% for value in ["CreateAsc", "CreateDesc", "UpdateAsc", "UpdateDesc", "NameAsc", "NameDesc"] %}
+                <li>
+                    <input type="radio"
+                        name="sort_type"
+                        id="{{ value }}"
+                        value="{{ value }}"
+                        {% if search.sort_type == value %}
+                        checked="checked"
+                        {% endif %}>
+                    <label for="{{ value }}">{{ value }}</label>
+                </li>
+                {% endfor %}
+            </ul>
+            <br>
+            <input type="reset">
+            <input type="submit">
+        </form>
+    </section>
+    <section>
+        <h2>Search results</h2>
+        <div class="cards">
+            {% for article in articles %}
+            {{ macros::article_card(path=article[0], meta=article[1]) }}
+            {% endfor %}
+        </div>
+    </section>
+</main>
+{% endblock main %}

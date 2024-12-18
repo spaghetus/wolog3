@@ -1,0 +1,23 @@
+{% macro article_card(path, meta, property="hasPart") %}
+<article class="h-entry">
+    <h3>
+        <a property="{{property}}"
+            class="p-name"
+            href="/post/{{ path | trim_start_matches(pat="./articles/") | trim_end_matches(pat=".md") }}">
+            {{meta.title}}
+        </a>
+    </h3>
+    <ul class="
+            horizontal">
+        {% for tag in meta.tags %}
+        <li><a href="/tags?tags={{tag}}">#{{tag}}</a></li>
+        {% endfor %}
+    </ul>
+    <p>
+        Created <time datetime="{{meta.created}}">{{meta.created}}</time>{% if meta.created != meta.updated %}; updated <time datetime="{{meta.updated}}">{{meta.updated}}{% endif %}.
+    </p>
+    <p class="p-summary">
+        {{meta.blurb}}
+    </p>
+</article>
+{% endmacro article_card %}

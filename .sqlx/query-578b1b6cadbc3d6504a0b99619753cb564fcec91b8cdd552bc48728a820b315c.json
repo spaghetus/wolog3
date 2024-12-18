@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT ast, meta FROM posts WHERE path = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "ast",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 1,
+        "name": "meta",
+        "type_info": "Jsonb"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "578b1b6cadbc3d6504a0b99619753cb564fcec91b8cdd552bc48728a820b315c"
+}

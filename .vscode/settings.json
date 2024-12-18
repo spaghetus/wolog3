@@ -1,0 +1,16 @@
+{
+    "rust-analyzer.server.path": "rust-analyzer",
+    "sqltools.connections": [
+        {
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 5432,
+            "driver": "PostgreSQL",
+            "socketPath": "/mnt/data/code/wolog3/.s.PGSQL.5432",
+            "database": "wolog",
+            "username": "willow",
+            "name": "wolog postgres",
+            "password": ""
+        }
+    ]
+}

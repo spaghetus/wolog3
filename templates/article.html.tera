@@ -1,0 +1,76 @@
+{% extends "main.html.tera" %}
+
+{% block head %}
+<title>{{meta.title}}</title>
+<link href="/webmention"
+    rel="webmention" />
+{% endblock head %}
+
+{% block toc %}
+{% if toc != "" %}
+<section class="toc">
+    <ul>
+        {{ toc | safe }}
+    </ul>
+</section>
+{% endif %}
+{% endblock toc %}
+
+{% block bodyprops %}
+typeof="BlogPosting"
+{% endblock bodyprops %}
+
+{% block main %}
+<main class="h-entry">
+    <header hidden="from-humans">
+        <h1 property="name"
+            class="p-name">{{meta.title}}</h1>
+        <div hidden="true"
+            property="abstract"
+            class="p-summary">{{meta.blurb}}</div>
+        <span property="keywords"
+            hidden="true">{{meta.tags | join(sep=",")}}</span>
+        <a property="author"
+            rel="author"
+            class="p-author h-card"
+            hred="https://wolo.dev">Willow</a>
+        <a href="https://fed.brid.gy"
+            class="u-bridgy-fed"></a>
+    </header>
+    <div class="e-content">
+        <h1>{{ meta.title }}</h1>
+        {% if meta.ready != true %}
+        <p><i>(this post isn't marked as ready, but it's allowed to render because we're in developer mode)</i></p>
+        {% endif %}
+        {{ content | safe }}
+    </div>
+    <hr>
+    <footer>
+        {% if meta.tags %}
+        <ul class="horizontal">
+            Filed under
+            {% for tag in meta.tags %}
+            <li><a href="/tags?tags={{tag}}"
+                    property="isPartOf">#{{tag}}</a></li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        <p>
+            Created <time property="dateCreated"
+                class="dt-published"
+                datetime="{{meta.created}}">{{meta.created}}</time>{% if meta.created != meta.updated %}; updated <time property="dateModified"
+                datetime="{{meta.updated}}">{{meta.updated}}{% endif %}.
+        </p>
+        {% if meta.mentioners | length > 0 %}
+        <hr>
+        {{ meta.mentioners | length }} backlink(s) found by WebMention:
+        <ul>
+            {% for backlink in meta.mentioners %}
+            <li><a href="{{backlink}}"
+                    rel="nofollow">{{backlink}}</a></li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </footer>
+</main>
+{% endblock main %}

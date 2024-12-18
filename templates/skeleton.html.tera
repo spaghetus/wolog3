@@ -1,0 +1,92 @@
+{% import "macros.html.tera" as macros %}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet"
+        href="/static/index.css">
+    {% block head %}
+    <title>Document</title>
+    {% endblock head %}
+</head>
+
+<body {% block bodyprops %}{% endblock bodyprops %}
+    vocab="https://schema.org/">
+    <div class="paper">
+        {% block main %}
+        <main>
+        </main>
+        {% endblock main %}
+        <aside>
+            <nav>
+                <header>
+                    <h1>
+                        {% block title %}
+                        <a href="/">wolog</a>
+                        {% endblock title %}
+                    </h1>
+                </header>
+                <section>
+                    {% block navlinks %}
+                    <ul>
+                        <li><a href="/">home</a></li>
+                        <li>b</li>
+                        <li>c</li>
+                    </ul>
+                    {% endblock navlinks %}
+                </section>
+            </nav>
+            {% block toc %}
+            <section class="toc">
+            </section>
+            {% endblock toc %}
+            <section>
+                {% block contact %}
+                <p>
+                    <i>contact</i>
+                </p>
+                <p>
+                <ul class="horizontal">
+                    <li><a rel="me"
+                            property="author"
+                            href="https://blahaj.zone/@w">fedi</a></li>
+                    <li><a rel="me"
+                            property="author"
+                            href="https://github.com/spaghetus">gh</a></li>
+                    <li><a rel="me"
+                            property="author"
+                            href="https://keyoxide.org/hkp/fe21e0981cdfd50add086423c21a693ba4693a60">gpg</a></li>
+                    <li><a rel="me"
+                            property="author"
+                            href="https://discordapp.com/users/254656673484898314">discord</a></li>
+                    <li><u title="public@w.wolo.dev">smtp</u> <!-- make it slightly less trivial for a scraper to pick up --></li>
+                </ul>
+                </p>
+                {% endblock contact %}
+            </section>
+            <section class="license"
+                title="license notice">
+                {% block license %}
+                <p xmlns:cc="http://creativecommons.org/ns#"
+                    xmlns:dct="http://purl.org/dc/terms/">
+                    <a property="dct:title"
+                        rel="cc:attributionURL"
+                        href="https://wolo.dev">the wolog</a>
+                    is licensed under
+                    <a href="https://creativecommons.org/licenses/by-nc/4.0/?ref=chooser-v1"
+                        target="_blank"
+                        rel="license noopener noreferrer"
+                        style="display:inline-block;">CC BY-NC 4.0</a>
+                    except where otherwise specified
+                </p>
+                {% endblock license %}
+            </section>
+        </aside>
+    </div>
+</body>
+
+</html>

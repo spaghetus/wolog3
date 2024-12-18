@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO posts\n                    VALUES ($1, $2, $3, $4)\n                    ON CONFLICT(path) DO UPDATE\n                        SET updated = excluded.updated,\n                            ast = excluded.ast,\n                            meta = excluded.meta",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Timestamptz",
+        "Jsonb",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8b1eeebf7876ed744b6d2842928d1d19871c35fb83cc2e22dcde44d4bf120dc7"
+}

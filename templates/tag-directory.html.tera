@@ -1,0 +1,28 @@
+{% extends "main.html.tera" %}
+
+{% block head %}
+<title>Tag Listing</title>
+{% endblock head %}
+
+{% block toc %}
+{% endblock toc %}
+
+{% block bodyprops %}
+typeof="Collection"
+{% endblock bodyprops %}
+
+{% block main %}
+<main>
+    <section>
+        <h1>Listing of all tags</h1>
+        <ol>
+            {% for tag, count in tags %}
+            <li>
+                <a property="hasPart"
+                    href=/search?tag={{tag}}>#{{tag}} ({{count}})</a>
+            </li>
+            {% endfor %}
+        </ol>
+    </section>
+</main>
+{% endblock main %}

@@ -1,0 +1,51 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'wolog'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=wolog",
+                    "--package=wolog"
+                ],
+                "filter": {
+                    "name": "wolog",
+                    "kind": "bin"
+                }
+            },
+            "args": [
+                "-d",
+                "-ohttp://127.0.0.1:8000"
+            ],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "DATABASE_URL": "postgres://localhost/wolog?host=/mnt/data/code/wolog3"
+            }
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'wolog'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=wolog",
+                    "--package=wolog"
+                ],
+                "filter": {
+                    "name": "wolog",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}
