@@ -7,6 +7,7 @@
   stdenv = pkgs.stdenv;
   cfg = config.services.wolog;
   toml = pkgs.formats.toml {};
+  default_url = "postgres://localhost/wolog?host=/run/postgresql/.s.PGSQL.5432";
   path2derivation = path: pkgs.runCommand (builtins.toString path) {} ''cp -r ${path} $out'';
   inherit (lib) mkEnableOption mkPackageOption mkIf mkOption types optionalAttrs;
 in {
@@ -23,7 +24,7 @@ in {
 
     db-url = mkOption {
       type = types.str;
-      default = "postgres://localhost/wolog";
+      default = default_url;
       description = "URL of the Wolog's database.";
     };
 
@@ -191,7 +192,7 @@ in {
         wolog.members = [cfg.user];
       };
 
-      services.postgresql = mkIf (cfg.user == "wolog" && cfg.db-url == "postgres://localhost/wolog") {
+      services.postgresql = mkIf (cfg.user == "wolog" && cfg.db-url == default_url) {
         enable = true;
         ensureUsers = [
           {
