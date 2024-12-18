@@ -146,16 +146,14 @@ in {
         wantedBy = ["multi-user.target"];
 
         path = [pkgs.pandoc];
-        environment =
-          {
-            DATABASE_URL = cfg.db-url;
-            CONTENT_ROOT = cfg.articlesDir;
-            STATIC_ROOT = cfg.staticDir;
-            ASSETS_ROOT = cfg.assetsDir;
-            TEMPLATES_ROOT = cfg.templatesDir;
-            ORIGIN = cfg.origin;
-          }
-          // mkIf cfg.preview {WOLOG_PREVIEW_NONREADY = "1";};
+        environment = {
+          DATABASE_URL = cfg.db-url;
+          CONTENT_ROOT = cfg.articlesDir;
+          STATIC_ROOT = cfg.staticDir;
+          ASSETS_ROOT = cfg.assetsDir;
+          TEMPLATES_ROOT = cfg.templatesDir;
+          ORIGIN = cfg.origin;
+        };
 
         serviceConfig = {
           Type = "simple";
