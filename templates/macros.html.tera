@@ -3,7 +3,7 @@
     <h3>
         <a property="{{property}}"
             class="p-name"
-            href="/post/{{ path | trim_start_matches(pat="./articles/") | trim_end_matches(pat=".md") }}">
+            href="/post/{{ path }}">
             {{meta.title}}
         </a>
     </h3>
