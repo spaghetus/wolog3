@@ -1,10 +1,22 @@
 {% import "macros.html.tera" as macros %}
 
 <p>
-<div class="cards hscroll">
+<div class="cards">
     {% for article in articles %}
     {{ macros::article_card(path=article[0], meta=article[1]) }}
     {% endfor %}
+    {% if articles | length > 0 %}
+    <div>
+        <p>
+            <a href="/search?{{ search_qs }}">(Search based on this list)</a>
+        </p>
+    </div>
+    {% else %}
+    <div>
+        <p>
+            <a href="/search?{{ search_qs }}">(No results)</a>
+        </p>
+    </div>
+    {% endif %}
 </div>
-<a href="/search?{{ search_qs }}">(Search based on this list)</a>
 </p>

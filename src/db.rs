@@ -156,7 +156,7 @@ impl Display for Toc {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, strum::Display)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, strum::Display, FromFormField)]
 pub enum PostType {
     #[default]
     Note,
@@ -425,6 +425,8 @@ pub struct Search {
     pub exclude_paths: Vec<String>,
     #[serde(default)]
     pub tags: Vec<String>,
+    #[serde(default)]
+    pub post_type: Option<PostType>,
     #[serde(default = "unbounded")]
     pub created: Bounds<NaiveDate>,
     #[serde(default = "unbounded")]
@@ -471,6 +473,7 @@ impl<'a> From<&'a Search> for Url {
                 .as_ref()
                 .map(|t| ("title_filter", t.clone())),
         )
+        .chain(val.post_type.as_ref().map(|t| ("post_type", t.to_string())))
         .chain(val.limit.map(|l| ("limit", l.to_string())));
         Url::parse_with_params("http:///search", params).unwrap()
     }

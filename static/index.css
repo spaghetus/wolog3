@@ -123,17 +123,6 @@ html {
         font-size: 70%;
         text-align: center;
     }
-
-    div.cards {
-        display: flex;
-        flex-direction: row;
-        flex-wrap: wrap;
-    }
-
-    div.cards>* {
-        flex-basis: max(25ch, 33%);
-        text-align: left;
-    }
 }
 
 @media print {
@@ -144,6 +133,15 @@ html {
 
 .inline {
     display: inline;
+}
+
+.inline-block {
+    display: inline-block;
+    white-space: nowrap;
+}
+
+.left {
+    text-align: left;
 }
 
 ul.horizontal {
@@ -194,6 +192,72 @@ ul.horizontal>li:not(:last-child)::after {
     aside ul>li:not(:last-child)::after {
         content: ";";
     } */
+}
+
+@media screen and (orientation: landscape) {
+
+
+    /* div.cards {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+
+    div.cards>* {
+        flex-basis: max(25ch, 33%);
+        text-align: left;
+    }
+
+    .cards>* {
+        border-style: outset;
+        border-color: var(--font-color);
+        border-width: 1px;
+        border-radius: 18.72px;
+        padding: 18.72px;
+        padding-top: 0;
+    } */
+
+    div.cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(256px, 1fr));
+        gap: 0.5rem;
+        grid-auto-rows: 64px;
+        grid-auto-flow: dense;
+    }
+
+    div.cards>* {
+        padding: 1rem;
+        padding-top: 0;
+        padding-bottom: 0;
+        border: 1px solid gray;
+        border-radius: 1rem;
+        overflow-y: scroll;
+    }
+
+    div.cards * {
+        text-align: left;
+    }
+
+    div.cards>*.article,
+    div.cards>*.reply {
+        grid-row-end: span 3;
+    }
+
+    div.cards>*.note {
+        grid-row-end: span 2;
+    }
+
+    div.cards>*.like *,
+    div.cards>*.repost * {
+        text-overflow: ellipsis;
+        text-wrap: nowrap;
+        overflow-x: hidden;
+    }
+}
+
+.highlight {
+    font-size: large;
+    color: var(--font-accent);
 }
 
 .browsewrap {

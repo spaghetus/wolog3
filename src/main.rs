@@ -6,7 +6,7 @@ extern crate rocket;
 
 use chrono::NaiveDate;
 use clap::Parser;
-use db::{Search, SortType};
+use db::{PostType, Search, SortType};
 use pandoc::{ast_to_html, run_postproc_filters};
 use rocket::{
     form::{FromFormField, ValueField},
@@ -191,6 +191,7 @@ struct SearchForm {
     pub title_filter: Option<String>,
     #[field(default = SortType::CreateDesc)]
     pub sort_type: SortType,
+    pub post_type: Option<PostType>,
     pub limit: Option<u32>,
 }
 
@@ -200,6 +201,7 @@ impl<'a> From<&'a SearchForm> for Search {
             search_path: value.search_path.clone(),
             exclude_paths: value.exclude_path.clone(),
             tags: value.tag.clone(),
+            post_type: value.post_type,
             created: (
                 value
                     .created_after

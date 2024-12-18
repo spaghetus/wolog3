@@ -69,15 +69,15 @@ async fn find_links(mut ast: Pandoc) -> Pandoc {
         fn visit_inline(&mut self, inline: &mut Inline) {
             if let Inline::Link((_, classes, _), _contents, (target, _)) = inline {
                 if classes.iter().any(|c| c == "mention") {
-                    self.0.push(target.to_string())
-                }
-                for class in classes.iter() {
-                    if matches!(self.1, PostType::Note) {
-                        self.1 = match class.as_str() {
-                            "u-like-of" => PostType::Like,
-                            "u-repost-of" => PostType::Repost,
-                            "u-in-reply-to" => PostType::Reply,
-                            _ => PostType::Note,
+                    self.0.push(target.to_string());
+                    for class in classes.iter() {
+                        if matches!(self.1, PostType::Note) {
+                            self.1 = match class.as_str() {
+                                "u-like-of" => PostType::Like,
+                                "u-repost-of" => PostType::Repost,
+                                "u-in-reply-to" => PostType::Reply,
+                                _ => PostType::Note,
+                            }
                         }
                     }
                 }

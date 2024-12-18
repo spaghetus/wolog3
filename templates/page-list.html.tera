@@ -21,7 +21,8 @@ typeof="Collection"
     <section>
         <h2>Search parameters</h2>
         <form action="/search"
-            method="get">
+            method="get"
+            class="left">
             <fieldset>
                 <legend>Features:</legend>
                 <label for="search_path">Search path:</label>
@@ -39,7 +40,7 @@ typeof="Collection"
                 <label for="tag">Tags:</label>
                 <ul class="horizontal inline">
                     {% for tag in tags %}
-                    <li>
+                    <li class="inline-block">
                         <input type="checkbox"
                             name="tag"
                             id="{{ tag }}"
@@ -90,7 +91,7 @@ typeof="Collection"
             <label for="sort_type">Sort type:</label>
             <ul class="horizontal inline">
                 {% for value in ["CreateAsc", "CreateDesc", "UpdateAsc", "UpdateDesc", "NameAsc", "NameDesc"] %}
-                <li>
+                <li class="inline-block">
                     <input type="radio"
                         name="sort_type"
                         id="{{ value }}"

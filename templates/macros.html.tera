@@ -1,5 +1,82 @@
 {% macro article_card(path, meta, property="hasPart") %}
-<article class="h-entry">
+{% if meta.post_type == "Like" %}
+<article class="h-entry like highlight">
+    <p>
+        <a href="/post/{{ path }}">Like:</a>
+        <a class="u-like-of"
+            href="{{ meta.mentions.0 }}">{{ meta.mentions.0 }}</a>
+    </p>
+</article>
+{% elif meta.post_type == "Repost" %}
+<article class="h-entry repost highlight">
+    <p>
+        <a property="{{property}}"
+            href="/post/{{ path }}">Repost:
+        </a>
+        <a class="u-repost-of"
+            href="{{ meta.mentions.0 }}">{{ meta.mentions.0 }}</a>
+    </p>
+</article>
+{% elif meta.post_type == "Reply" %}
+<article class="h-entry reply">
+    {% if meta.title == "Untitled Page" %}
+    <h3>
+        <a property="{{property}}"
+            href="/post/{{ path }}">Reply on
+            <time datetime="{{meta.created}}">{{meta.created}}</time>{% if meta.created != meta.updated %},
+            edited <time datetime="{{meta.updated}}">{{meta.updated}}</time>,
+            {% else %},
+            {% endif %}
+        </a> to
+        <a class="u-in-reply-to"
+            href="{{ meta.mentions.0 }}">
+            {{ meta.mentions.0 }}
+        </a>
+    </h3>
+    {% else %}
+    <h3>
+        <a property="{{property}}"
+            class="p-name"
+            href="/post/{{ path }}">
+            {{meta.title}}
+        </a>
+        <a class="u-in-reply-to"
+            href="{{ meta.mentions.0 }}">
+            (RE)
+        </a>
+    </h3>
+    {% endif %}
+    <p class="p-summary">
+        {{meta.blurb}}
+    </p>
+    <ul class="horizontal">
+        {% for tag in meta.tags %}
+        <li><a href="/search?tag={{tag}}">#{{tag}}</a></li>
+        {% endfor %}
+    </ul>
+</article>
+{% elif meta.post_type == "Note" %}
+<article class="h-entry note">
+    <h3>
+        <a property="{{property}}"
+            href="/post/{{ path }}">
+            <time datetime="{{meta.created}}">{{meta.created}}</time>
+            {% if meta.created != meta.updated %},
+            ✎
+            {% endif %}
+        </a>
+    </h3>
+    <p class="p-summary">
+        {{ meta.blurb }}
+    </p>
+    <ul class="horizontal">
+        {% for tag in meta.tags %}
+        <li><a href="/search?tag={{tag}}">#{{tag}}</a></li>
+        {% endfor %}
+    </ul>
+</article>
+{% else %}
+<article class="h-entry article">
     <h3>
         <a property="{{property}}"
             class="p-name"
@@ -7,8 +84,7 @@
             {{meta.title}}
         </a>
     </h3>
-    <ul class="
-            horizontal">
+    <ul class="horizontal">
         {% for tag in meta.tags %}
         <li><a href="/search?tag={{tag}}">#{{tag}}</a></li>
         {% endfor %}
@@ -20,4 +96,5 @@
         {{meta.blurb}}
     </p>
 </article>
+{% endif %}
 {% endmacro article_card %}
