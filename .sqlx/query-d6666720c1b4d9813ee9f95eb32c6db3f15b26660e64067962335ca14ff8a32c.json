@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT (meta->'tags') as \"tags: Json<Vec<String>>\" FROM visible_posts",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "tags: Json<Vec<String>>",
+        "type_info": "Jsonb"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "d6666720c1b4d9813ee9f95eb32c6db3f15b26660e64067962335ca14ff8a32c"
+}
