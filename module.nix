@@ -178,7 +178,6 @@ in {
           '';
           Restart = "always";
           BindReadOnlyPaths = "${cfg.articlesDir} ${cfg.assetsDir} ${cfg.templatesDir} ${cfg.staticDir} ${workdir}";
-          BindReadWritePaths = "${config.services.wolog.db-path}";
           ProtectHome = "tmpfs";
         };
       };
