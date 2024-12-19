@@ -18,7 +18,7 @@ in
     LD_LIBRARY_PATH = lib.makeLibraryPath deps;
     shellHook = ''
       if [ ! -f ".db/postmaster.pid" ]; then
-        pg_ctl -D .db -l db.log -o "--unix_socket_directories='$PWD'" start
+        pg_ctl -D .db -l db.log -o "--unix_socket_directories='$PWD' -c listen_addresses=''" start
       fi
     '';
   }
