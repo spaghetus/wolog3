@@ -20,9 +20,9 @@
     {% endif %}
 </div>
 {% if search.rss %}
-<a href="/search?{{ search_qs }}"
+<a href="/feed?{{ search_qs }}"
     hidden="from-humans"
     rel="alternate"
-    type="application/xml+rss">RSS feed for this search</a>
+    type="application/atom+xml">Atom feed for this search</a>
 {% endif %}
 </p>
