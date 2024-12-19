@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+    <title>{{ title | default(value="The Wolog") }}</title>
+    <link href="{{ config.origin }}" />
+    <id>
+        {{- "" -}}
+        <![CDATA[{{ url }}]]>
+        {{- "" -}}
+    </id>
+    {% if articles | length > 0 %}
+    <updated>
+        {{- "" -}}
+        {{ articles | map(attribute="1.updated") | sort | last }}T00:00:00Z
+        {{- "" -}}
+    </updated>
+    {% endif %}
+    {% if config.author %}
+    <author>
+        <name>{{ config.author }}</name>
+    </author>
+    {% else %}
+    <author>
+        <name>Unconfigured author name</name>
+        <uri>{{config.origin}}</uri>
+    </author>
+    {% endif %}
+    <generator uri="https://github.com/spaghetus/wolog3">
+        The Wolog
+    </generator>
+    {% if icon %}
+    <icon>{{ icon }}</icon>
+    {% endif %}
+    {% if logo %}
+    <logo>{{ logo }}</logo>
+    {% endif %}
+    <rights>See {{ config.origin }}</rights>
+
+    {% for post in articles %}
+    <entry>
+        <id>
+            {{- "" -}}
+            {{ config.origin }}post/{{ post.0 | urlencode }}
+            {{- "" -}}
+        </id>
+        <published>{{post.1.created}}T00:00:00Z</published>
+        <updated>{{post.1.updated}}T00:00:00Z</updated>
+
+        {% if post.1.post_type == "Like" %}
+        <title>Liked {{post.1.mentions.0}}</title>
+        <link rel="alternate"
+            href="{{post.1.mentions.0}}" />
+        <category term="like" />
+        {% if post.1.blurb != "" %}
+        <summary>{{post.1.blurb}}</summary>
+        {% endif %}
+
+        {% elif post.1.post_type == "Repost" %}
+        <title>Reposted {{post.1.mentions.0}}</title>
+        <link rel="alternate"
+            href="{{post.1.mentions.0}}" />
+        <category term="repost" />
+        <rights>Linking is permitted under the fair use doctrine.</rights>
+        {% if post.1.blurb != "" %}
+        <summary>{{post.1.blurb}}</summary>
+        {% endif %}
+
+        {% elif post.1.post_type == "Reply" %}
+        {% if post.1.title != "Untitled Page" %}
+        <title>Reply to {{post.1.mentions.0}}</title>
+        {% else %}
+        <title>{{post.1.title}}</title>
+        {% endif %}
+        <link rel="alternate"
+            href="{{ config.origin }}post/{{ post.0 | urlencode }}?bare" />
+        <link rel="related"
+            href="{{post.1.mentions.0}}" />
+        <category term="reply" />
+        <rights>Commentary and linking are permitted under the fair use doctrine.</rights>
+        {% if post.1.blurb != "" %}
+        <summary>{{post.1.blurb}}</summary>
+        {% endif %}
+
+        {% else %}
+        <title>{{post.1.title}}</title>
+        <link rel="alternate"
+            href="{{ config.origin }}post/{{ post.0 | urlencode }}?bare" />
+        {% if post.1.blurb != "" %}
+        <summary>{{post.1.blurb}}</summary>
+        {% endif %}
+
+        {% endif %}
+    </entry>
+    {% endfor %}
+</feed>

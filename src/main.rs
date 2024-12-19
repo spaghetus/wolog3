@@ -9,17 +9,18 @@ use clap::Parser;
 use db::{PostType, Search, SortType};
 use pandoc::{ast_to_html, run_postproc_filters};
 use rocket::{
-    form::{FromFormField, ValueField},
+    form::{Form, FromFormField, ValueField},
     fs::{FileServer, Options},
     futures::FutureExt,
-    http::ContentType,
+    http::{Accept, ContentType, HeaderMap, MediaType, QMediaType, Status},
     response::content::RawHtml,
-    State,
+    Response, State,
 };
 use serde::Serialize;
 use serde_json::json;
 use sqlx::{migrate, Pool, Postgres};
 use std::{
+    collections::HashMap,
     ops::{Bound, Deref},
     path::PathBuf,
     str::FromStr,
@@ -30,7 +31,7 @@ use tera::Tera;
 use tokio::sync::RwLock;
 use url::Url;
 
-#[derive(clap::Parser)]
+#[derive(clap::Parser, Serialize)]
 struct Config {
     #[arg(short, long, default_value = "./articles", env = "WOLOG_CONTENT_ROOT")]
     content_root: PathBuf,
@@ -46,7 +47,7 @@ struct Config {
     #[arg(
         short,
         long,
-        default_value = "./templates/*.html.tera",
+        default_value = "./templates/*.tera",
         env = "WOLOG_TEMPLATES_ROOT"
     )]
     templates_root: PathBuf,
@@ -60,6 +61,8 @@ struct Config {
     database_url: String,
     #[arg(long, default_value = "60")]
     update_interval: u64,
+    #[arg(short = 'A', long, env = "WOLOG_AUTHOR")]
+    author: Option<String>,
 }
 
 #[rocket::main]
@@ -93,6 +96,7 @@ async fn main() {
     rocket::build()
         .manage(db)
         .manage(tera.clone())
+        .manage(config.clone())
         .mount(
             "/static",
             FileServer::new(&config.static_root, Options::None),
@@ -101,7 +105,10 @@ async fn main() {
             "/assets",
             FileServer::new(&config.assets_root, Options::None),
         )
-        .mount("/", routes![index, page, tags, search, webmention])
+        .mount(
+            "/",
+            routes![index, page, tags, search, search_feed, webmention],
+        )
         .launch()
         .await
         .unwrap();
@@ -112,7 +119,7 @@ async fn index(
     db: &State<Pool<Postgres>>,
     tera: &State<Arc<RwLock<Tera>>>,
 ) -> Result<RawHtml<String>, String> {
-    page(db, tera, PathBuf::from_str("index").unwrap()).await
+    page(db, tera, PathBuf::from_str("index").unwrap(), false).await
 }
 
 macro_rules! context {
@@ -121,11 +128,12 @@ macro_rules! context {
     };
 }
 
-#[get("/post/<path..>")]
+#[get("/post/<path..>?<bare>")]
 async fn page(
     db: &State<Pool<Postgres>>,
     tera: &State<Arc<RwLock<Tera>>>,
     path: PathBuf,
+    bare: bool,
 ) -> Result<RawHtml<String>, String> {
     let path = path.to_string_lossy();
     let (ast, meta) = db::read_post(db, &path).await.ok_or("Post not found")?;
@@ -133,11 +141,14 @@ async fn page(
     let content = ast_to_html(content)
         .await
         .ok_or("Converting ast to html failed")?;
+    if bare {
+        return Ok(RawHtml(content));
+    }
     let content = tera
         .read()
         .await
         .render(
-            &meta.template,
+            format!("{}.html.tera", meta.template).as_str(),
             &context!({
                 "toc": meta.toc.iter().map(ToString::to_string).collect::<String>(),
                 "meta": &meta,
@@ -225,6 +236,7 @@ impl<'a> From<&'a SearchForm> for Search {
             title_filter: value.title_filter.clone(),
             sort_type: value.sort_type,
             limit: value.limit,
+            extra: tera::Value::Object(Default::default()),
         }
     }
 }
@@ -246,16 +258,20 @@ async fn tags(
     Ok(RawHtml(content))
 }
 
-#[get("/search?<search_form..>")]
+#[get("/search?<search_form..>", format = "text/html")]
 async fn search(
     search_form: SearchForm,
     db: &State<Pool<Postgres>>,
     tera: &State<Arc<RwLock<Tera>>>,
-) -> Result<RawHtml<String>, String> {
+) -> Result<RawHtml<String>, (Status, String)> {
     let search: Search = (&search_form).into();
     let search_url: Url = (&search).into();
-    let results = db::search(db, &search).await.map_err(|e| e.to_string())?;
-    let tags = db::tags(db).await.map_err(|e| e.to_string())?;
+    let results = db::search(db, &search)
+        .await
+        .map_err(|e| (Status::InternalServerError, e.to_string()))?;
+    let tags = db::tags(db)
+        .await
+        .map_err(|e| (Status::InternalServerError, e.to_string()))?;
     let context = context!({
         "search": search_form,
         "articles": results,
@@ -266,6 +282,73 @@ async fn search(
         .read()
         .await
         .render("page-list.html.tera", &context)
-        .expect("Tera rendering failure");
+        .map_err(|e| {
+            dbg!(&e);
+            (
+                Status::InternalServerError,
+                format!("I couldn't finalize rendering this page because: {e}"),
+            )
+        })?;
     Ok(RawHtml(content))
+}
+
+#[get("/feed?<search_form..>", format = "application/atom+xml")]
+async fn search_feed(
+    search_form: SearchForm,
+    db: &State<Pool<Postgres>>,
+    tera: &State<Arc<RwLock<Tera>>>,
+    config: &State<Arc<Config>>,
+) -> Result<(ContentType, String), (Status, String)> {
+    let mut search: Search = (&search_form).into();
+    search.limit = search.limit.map(|l| l.min(32)).unwrap_or(32).into();
+    search.sort_type = SortType::CreateDesc;
+    let search_url: Url = (&search).into();
+    let search_qs = search_url.query().unwrap_or("");
+    search_atom_inner(
+        search,
+        db,
+        tera,
+        "Wolog (Search)".to_string().into(),
+        "/favicon.ico".to_string().into(),
+        "/banner.png".to_string().into(),
+        config,
+        format!("{}feed?{search_qs}", config.origin),
+    )
+    .await
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn search_atom_inner(
+    search: Search,
+    db: &State<Pool<Postgres>>,
+    tera: &State<Arc<RwLock<Tera>>>,
+    title: Option<String>,
+    icon: Option<String>,
+    logo: Option<String>,
+    config: &State<Arc<Config>>,
+    feed_url: String,
+) -> Result<(ContentType, String), (Status, String)> {
+    let results = db::search(db, &search)
+        .await
+        .map_err(|e| (Status::InternalServerError, e.to_string()))?;
+    let context = context!({
+        "articles": results,
+        "url": feed_url,
+        "title": title,
+        "icon": icon,
+        "logo": logo,
+        "config": (*config).clone(),
+    });
+    let content = tera
+        .read()
+        .await
+        .render("page-list.atom.tera", &context)
+        .map_err(|e| {
+            dbg!(&e);
+            (
+                Status::InternalServerError,
+                format!("I couldn't finalize rendering this page because: {e}"),
+            )
+        })?;
+    Ok((ContentType::new("application", "atom+xml"), content))
 }

@@ -104,11 +104,11 @@ async fn find_links(mut ast: Pandoc) -> Pandoc {
             "template".to_string(),
             MetaValue::MetaString(
                 match post_type {
-                    PostType::Note => "note.html.tera",
-                    PostType::Article => "article.html.tera",
-                    PostType::Like => "like.html.tera",
-                    PostType::Repost => "repost.html.tera",
-                    PostType::Reply => "reply.html.tera",
+                    PostType::Note => "note",
+                    PostType::Article => "article",
+                    PostType::Like => "like",
+                    PostType::Repost => "repost",
+                    PostType::Reply => "reply",
                 }
                 .to_string(),
             ),
@@ -146,6 +146,7 @@ async fn frag_search_results(
                 let ctx = json!({
                     "articles": search,
                     "search_qs": search_url.query().unwrap_or(""),
+                    "search": search_spec,
                 });
                 let ctx = Context::from_serialize(ctx).unwrap();
 

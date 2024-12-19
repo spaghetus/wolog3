@@ -57,6 +57,7 @@
 </article>
 {% elif meta.post_type == "Note" %}
 <article class="h-entry note">
+    {% if meta.title == "Untitled Page" %}
     <h3>
         <a property="{{property}}"
             href="/post/{{ path }}">
@@ -66,6 +67,15 @@
             {% endif %}
         </a>
     </h3>
+    {% else %}
+    <h3>
+        <a property="{{property}}"
+            class="p-name"
+            href="/post/{{ path }}">
+            {{meta.title}}
+        </a>
+    </h3>
+    {% endif %}
     <p class="p-summary">
         {{ meta.blurb }}
     </p>

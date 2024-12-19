@@ -2,10 +2,10 @@
 
 {% block head %}
 <title>Search Results</title>
-<link rel="alternate"
-    href="/feed?{{ search_qs }}"
-    type="application/rss+xml"
-    title="RSS">
+<link href="/feed?{{ search_qs }}"
+    hidden="from-humans"
+    rel="alternate"
+    type="application/atom+xml" />
 {% endblock head %}
 
 {% block toc %}

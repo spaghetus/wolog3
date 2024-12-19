@@ -437,44 +437,46 @@ pub struct Search {
     pub sort_type: SortType,
     #[serde(default)]
     pub limit: Option<u32>,
+    #[serde(flatten)]
+    pub extra: Value,
 }
 
 impl<'a> From<&'a Search> for Url {
     fn from(val: &'a Search) -> Self {
-        let params = [
-            ("search_path", val.search_path.clone()),
-            ("sort_type", val.sort_type.to_string()),
-        ]
-        .into_iter()
-        .chain(
-            val.exclude_paths
-                .iter()
-                .map(|p| ("exclude_path", p.clone())),
-        )
-        .chain(val.tags.iter().map(|p| ("tag", p.clone())))
-        .chain(match val.created.0 {
-            Bound::Unbounded => None,
-            Bound::Included(d) | Bound::Excluded(d) => Some(("created_after", d.to_string())),
-        })
-        .chain(match val.created.1 {
-            Bound::Unbounded => None,
-            Bound::Included(d) | Bound::Excluded(d) => Some(("created_before", d.to_string())),
-        })
-        .chain(match val.updated.0 {
-            Bound::Unbounded => None,
-            Bound::Included(d) | Bound::Excluded(d) => Some(("updated_after", d.to_string())),
-        })
-        .chain(match val.updated.1 {
-            Bound::Unbounded => None,
-            Bound::Included(d) | Bound::Excluded(d) => Some(("updated_before", d.to_string())),
-        })
-        .chain(
-            val.title_filter
-                .as_ref()
-                .map(|t| ("title_filter", t.clone())),
-        )
-        .chain(val.post_type.as_ref().map(|t| ("post_type", t.to_string())))
-        .chain(val.limit.map(|l| ("limit", l.to_string())));
+        let params = [("sort_type", val.sort_type.to_string())]
+            .into_iter()
+            .chain(
+                (!val.search_path.is_empty()).then_some(("search_path", val.search_path.clone())),
+            )
+            .chain(
+                val.exclude_paths
+                    .iter()
+                    .map(|p| ("exclude_path", p.clone())),
+            )
+            .chain(val.tags.iter().map(|p| ("tag", p.clone())))
+            .chain(match val.created.0 {
+                Bound::Unbounded => None,
+                Bound::Included(d) | Bound::Excluded(d) => Some(("created_after", d.to_string())),
+            })
+            .chain(match val.created.1 {
+                Bound::Unbounded => None,
+                Bound::Included(d) | Bound::Excluded(d) => Some(("created_before", d.to_string())),
+            })
+            .chain(match val.updated.0 {
+                Bound::Unbounded => None,
+                Bound::Included(d) | Bound::Excluded(d) => Some(("updated_after", d.to_string())),
+            })
+            .chain(match val.updated.1 {
+                Bound::Unbounded => None,
+                Bound::Included(d) | Bound::Excluded(d) => Some(("updated_before", d.to_string())),
+            })
+            .chain(
+                val.title_filter
+                    .as_ref()
+                    .map(|t| ("title_filter", t.clone())),
+            )
+            .chain(val.post_type.as_ref().map(|t| ("post_type", t.to_string())))
+            .chain(val.limit.map(|l| ("limit", l.to_string())));
         Url::parse_with_params("http:///search", params).unwrap()
     }
 }
