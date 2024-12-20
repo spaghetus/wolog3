@@ -258,7 +258,7 @@ async fn tags(
     Ok(RawHtml(content))
 }
 
-#[get("/search?<search_form..>", format = "text/html")]
+#[get("/search?<search_form..>")]
 async fn search(
     search_form: SearchForm,
     db: &State<Pool<Postgres>>,
@@ -292,7 +292,7 @@ async fn search(
     Ok(RawHtml(content))
 }
 
-#[get("/feed?<search_form..>", format = "application/atom+xml")]
+#[get("/feed?<search_form..>")]
 async fn search_feed(
     search_form: SearchForm,
     db: &State<Pool<Postgres>>,
