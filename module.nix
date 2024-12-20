@@ -152,7 +152,7 @@ in {
           WOLOG_CONTENT_ROOT = cfg.articlesDir;
           WOLOG_STATIC_ROOT = cfg.staticDir;
           WOLOG_ASSETS_ROOT = cfg.assetsDir;
-          WOLOG_TEMPLATES_ROOT = "${cfg.templatesDir}/*.html.tera";
+          WOLOG_TEMPLATES_ROOT = "${cfg.templatesDir}/*.tera";
           WOLOG_ORIGIN = cfg.origin;
         };
 
