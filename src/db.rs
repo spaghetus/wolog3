@@ -285,7 +285,7 @@ async fn update_posts(db: &Pool<Postgres>, cfg: Arc<Config>) -> Result<(), sqlx:
             Some(())
         });
     }
-    #[expect(clippy::unnecessary_to_owned)]
+    #[allow(clippy::unnecessary_to_owned)]
     for path in posts
         .keys()
         .filter(|p| !all_files.contains(p.as_str()))

@@ -5,6 +5,11 @@
       url = "github:hercules-ci/flake-parts";
       inputs.nixpkgs-lib.follows = "nixpkgs";
     };
+    crate2nix.url = "github:nix-community/crate2nix";
+    devshell = {
+      url = "github:numtide/devshell";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
   outputs = inputs @ {
     self,
@@ -17,6 +22,10 @@
         "x86_64-linux"
         "aarch64-linux"
         "aarch64-darwin"
+      ];
+
+      imports = [
+        ./devshell.nix
       ];
 
       flake = {system, ...}: rec {
@@ -53,31 +62,64 @@
         inputs',
         ...
       }: let
-        cargo = builtins.fromTOML (builtins.readFile ./Cargo.toml);
-        pkg = pkgs.rustPlatform.buildRustPackage rec {
-          pname = cargo.package.name;
-          version = cargo.package.version;
-          nativeBuildInputs = [pkgs.pkg-config];
-          buildInputs = with pkgs; [openssl];
-          PKG_CONFIG_PATH = "${pkgs.openssl.dev}/lib/pkgconfig";
-          SQLX_OFFLINE = true;
-          src = pkgs.runCommand "src" {} ''
-            mkdir $out
-            cp -r ${./src} $out/src
-            cp -r ${./.sqlx} $out/.sqlx
-            cp -r ${./migrations} $out/migrations
-            cp -r ${./Cargo.toml} $out/Cargo.toml
-            cp -r ${./Cargo.lock} $out/Cargo.lock
-          '';
-          cargoLock = {
-            lockFile = ./Cargo.lock;
-          };
+        # If you dislike IFD, you can also generate it with `crate2nix generate`
+        # on each dependency change and import it here with `import ./Cargo.nix`.
+        cargoNix = inputs.crate2nix.tools.${system}.appliedCargoNix {
+          name = "wolog3";
+          src = ./.;
         };
       in rec {
+        checks = {
+          rustnix = cargoNix.rootCrate.build.override {
+            runTests = true;
+          };
+        };
+
         packages = {
-          wolog = pkg;
-          default = packages.wolog;
+          rustnix = cargoNix.rootCrate.build;
+          default = packages.rustnix;
+
+          inherit (pkgs) rust-toolchain;
+
+          rust-toolchain-versions = pkgs.writeScriptBin "rust-toolchain-versions" ''
+            ${pkgs.rust-toolchain}/bin/cargo --version
+            ${pkgs.rust-toolchain}/bin/rustc --version
+          '';
         };
       };
+
+      # perSystem = {
+      #   system,
+      #   pkgs,
+      #   lib,
+      #   inputs',
+      #   ...
+      # }: let
+      #   cargo = builtins.fromTOML (builtins.readFile ./Cargo.toml);
+      #   pkg = pkgs.rustPlatform.buildRustPackage rec {
+      #     pname = cargo.package.name;
+      #     version = cargo.package.version;
+      #     nativeBuildInputs = [pkgs.pkg-config];
+      #     buildInputs = with pkgs; [openssl];
+      #     PKG_CONFIG_PATH = "${pkgs.openssl.dev}/lib/pkgconfig";
+      #     SQLX_OFFLINE = true;
+      #     src = pkgs.runCommand "src" {} ''
+      #       mkdir $out
+      #       cp -r ${./src} $out/src
+      #       cp -r ${./.sqlx} $out/.sqlx
+      #       cp -r ${./migrations} $out/migrations
+      #       cp -r ${./Cargo.toml} $out/Cargo.toml
+      #       cp -r ${./Cargo.lock} $out/Cargo.lock
+      #     '';
+      #     cargoLock = {
+      #       lockFile = ./Cargo.lock;
+      #     };
+      #   };
+      # in rec {
+      #   packages = {
+      #     wolog = pkg;
+      #     default = packages.wolog;
+      #   };
+      # };
     };
 }

@@ -4,3 +4,4 @@ articles/*
 .db
 .s.PGSQL*
 db.log
+.data/pids
