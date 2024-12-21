@@ -1,8 +1,16 @@
-use std::{path::Path, process::Stdio, sync::Arc};
+use std::{
+    fs::Permissions,
+    io::{stderr, stdin, stdout, Write},
+    os::unix::fs::PermissionsExt,
+    path::Path,
+    process::{Command, Stdio},
+    sync::Arc,
+};
 
 use pandoc_ast::{Block, Format, Inline, MetaValue, MutVisitor, Pandoc};
 use serde_json::json;
 use sqlx::{Database, Pool, Postgres};
+use tempfile::{tempfile, NamedTempFile, TempPath};
 use tera::{Context, Tera};
 use tokio::{io::AsyncWriteExt, runtime::Handle, sync::RwLock};
 use url::Url;
@@ -51,6 +59,7 @@ pub async fn ast_to_html(ast: Pandoc) -> Option<String> {
 
 pub async fn run_preproc_filters(db: &Pool<Postgres>, ast: Pandoc) -> Pandoc {
     let ast = find_links(ast).await;
+    let ast = dynamic(ast).await;
     ast
 }
 
@@ -117,6 +126,59 @@ async fn find_links(mut ast: Pandoc) -> Pandoc {
     ast
 }
 
+async fn dynamic(mut ast: Pandoc) -> Pandoc {
+    struct DynamicVisitor;
+    impl MutVisitor for DynamicVisitor {
+        fn visit_block(&mut self, block: &mut Block) {
+            if let Block::CodeBlock((_, classes, attr), contents) = block {
+                if !classes.iter().any(|c| c == "dynamic") {
+                    return;
+                }
+                let json = classes.iter().any(|c| c == "pandoc_ast");
+                let interpreter = attr
+                    .iter()
+                    .find(|(k, _)| k == "interpreter")
+                    .map(|(_, v)| v.as_str())
+                    .unwrap_or("bash");
+                let mut file = NamedTempFile::new().unwrap();
+                file.write_all(contents.as_bytes()).unwrap();
+                file.flush().unwrap();
+                std::fs::set_permissions(&file, Permissions::from_mode(0o005)).unwrap();
+                let output = Command::new("sudo")
+                    .args(["-u", "nobody", "-g", "nogroup", interpreter])
+                    .arg(file.path())
+                    .stdin(Stdio::piped())
+                    .stdout(Stdio::piped())
+                    .stderr(Stdio::piped())
+                    .output()
+                    .unwrap();
+                if !output.status.success() {
+                    eprintln!("Code block failed with code {:?}", output.status.code());
+                    eprintln!("stdout:");
+                    stderr().write_all(&output.stdout).unwrap();
+                    eprintln!("stderr:");
+                    stderr().write_all(&output.stderr).unwrap();
+                    *contents = "Code block failed to execute, check server logs.".to_string();
+                    return;
+                }
+                if json {
+                    *block = serde_json::from_slice(&output.stdout).unwrap();
+                } else {
+                    let output = String::from_utf8_lossy(&output.stdout);
+                    *contents = output.to_string()
+                }
+            }
+            self.walk_block(block);
+        }
+    }
+    tokio::task::spawn_blocking(move || {
+        DynamicVisitor.walk_pandoc(&mut ast);
+        ast
+    })
+    .await
+    .unwrap()
+}
+
 async fn frag_search_results(
     db: &Pool<Postgres>,
     tera: &Arc<RwLock<Tera>>,
@@ -125,7 +187,6 @@ async fn frag_search_results(
     struct FragSearchVisitor(Handle, Pool<Postgres>, Arc<RwLock<Tera>>);
     impl MutVisitor for FragSearchVisitor {
         fn visit_block(&mut self, block: &mut Block) {
-            self.walk_block(block);
             if let Block::CodeBlock((_, classes, _), contents) = block {
                 if !classes.iter().any(|c| c == "search") {
                     return;
@@ -156,6 +217,8 @@ async fn frag_search_results(
                     .render("frag-search-results.html.tera", &ctx)
                     .unwrap_or_else(|e| format!("Search template failure: {e:#?}"));
                 *block = Block::RawBlock(Format("html".to_string()), html);
+            } else {
+                self.walk_block(block);
             }
         }
     }

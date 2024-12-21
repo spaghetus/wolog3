@@ -120,6 +120,14 @@ in {
       type = types.str;
       default = builtins.toString (pkgs.writeText "default.env" "");
     };
+
+    enableDynamic = mkOption {
+      type = types.bool;
+      default = true;
+      description = ''
+        Give the Wolog the ability to run dynamic blocks as nobody via sudo
+      '';
+    };
   };
 
   config = let
@@ -187,6 +195,14 @@ in {
           isSystemUser = true;
         };
       };
+
+      security.sudo.extraRules = optionalAttrs (cfg.enableDynamic) [
+        {
+          users = [cfg.user];
+          runAs = "nobody:nogroup";
+          commands = ["NOPASSWD:ALL"];
+        }
+      ];
 
       users.groups = optionalAttrs (cfg.group == "wolog") {
         wolog.members = [cfg.user];

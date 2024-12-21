@@ -1,5 +1,5 @@
 use crate::{pandoc, Config};
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::{DateTime, Duration, NaiveDate, Utc};
 use pandoc_ast::{Block, Inline, MetaValue, Pandoc};
 use rocket::{
     form::FromForm,
@@ -186,7 +186,7 @@ async fn update_posts(db: &Pool<Postgres>, cfg: Arc<Config>) -> Result<(), sqlx:
         let cfg = cfg.clone();
         let root = root.clone();
         move || {
-            let mut files = HashSet::new();
+            let mut all_files = HashSet::new();
             (
                 WalkDir::new(&cfg.content_root)
                     .into_iter()
@@ -203,37 +203,39 @@ async fn update_posts(db: &Pool<Postgres>, cfg: Arc<Config>) -> Result<(), sqlx:
                         let modified = std::fs::metadata(f.path())
                             .and_then(|f| f.modified())
                             .unwrap_or_else(|_| SystemTime::now());
-                        f.path()
-                            .to_str()
-                            .map(|f| (f.to_string(), DateTime::<Utc>::from(modified)))
+                        f.path().to_str().map(|f| {
+                            (
+                                f.to_string(),
+                                (
+                                    f.trim_start_matches(&*root)
+                                        .trim_start_matches(['.', '/'])
+                                        .trim_end_matches(".md")
+                                        .to_string(),
+                                    DateTime::<Utc>::from(modified) - Duration::seconds(1),
+                                ),
+                            )
+                        })
                     })
-                    .inspect(|(path, _)| {
-                        files.insert(
-                            path.trim_start_matches(&*root)
-                                .trim_start_matches(['.', '/'])
-                                .trim_end_matches(".md")
-                                .to_string(),
-                        );
+                    .inspect(|(path, (trimmed, _))| {
+                        all_files.insert(trimmed.clone());
                     })
-                    .filter(|(path, updated)| {
+                    .filter(|(path, (trimmed, updated))| {
                         posts
-                            .get(path)
+                            .get(trimmed)
                             .map(|cached| updated > cached)
                             .unwrap_or(true)
                     })
                     .collect(),
-                files,
+                all_files,
             )
         }
     })
     .await
     .expect("Failed to search for files");
-    dbg!(&all_files);
     let mut group = tokio::task::JoinSet::<Option<()>>::new();
-    for (path, updated) in files {
+    for (path, (trimmed, updated)) in files {
         let db = db.clone();
         let cfg = cfg.clone();
-        let root = root.clone();
         group.spawn(async move {
             let ast = pandoc::md_to_ast(&path).await?;
             let ast = pandoc::run_preproc_filters(&db, ast).await;
@@ -246,11 +248,11 @@ async fn update_posts(db: &Pool<Postgres>, cfg: Arc<Config>) -> Result<(), sqlx:
             }
             let ast = serde_json::to_value(&ast).ok()?;
             let meta_json = serde_json::to_value(&meta).ok()?;
-            let path = path
-                .trim_start_matches(&*root)
-                .trim_start_matches(['.', '/'])
-                .trim_end_matches(".md")
-                .to_string();
+            // let path = path
+            //     .trim_start_matches(&*root)
+            //     .trim_start_matches(['.', '/'])
+            //     .trim_end_matches(".md")
+            //     .to_string();
             query!(
                 "INSERT INTO posts
                     VALUES ($1, $2, $3, $4)
@@ -258,7 +260,7 @@ async fn update_posts(db: &Pool<Postgres>, cfg: Arc<Config>) -> Result<(), sqlx:
                         SET updated = excluded.updated,
                             ast = excluded.ast,
                             meta = excluded.meta",
-                path,
+                trimmed,
                 updated,
                 ast,
                 meta_json

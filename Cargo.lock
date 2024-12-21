@@ -3433,6 +3433,7 @@ dependencies = [
  "serde_yml",
  "sqlx",
  "strum",
+ "tempfile",
  "tera",
  "thiserror 2.0.3",
  "tokio",
