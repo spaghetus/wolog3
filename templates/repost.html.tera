@@ -1,1 +1,49 @@
 {% extends "article.html.tera" %}
+
+{% block main %}
+<main class="h-entry">
+    <header hidden="from-humans">
+        <span property="keywords"
+            hidden="true">{{meta.tags | join(sep=",")}}</span>
+        <a property="author"
+            rel="author"
+            class="p-author h-card"
+            hred="https://wolo.dev">Willow</a>
+        <a href="https://fed.brid.gy"
+            class="u-bridgy-fed"></a>
+    </header>
+    <p>
+        <a href="{{meta.mentions.0}}"
+            rel="u-like-of">Repost</a>
+    </p>
+    <p>
+        {{ meta.blurb }}
+    </p>
+
+    {# <iframe src="{{ meta.mentions.0 }}"
+        allow="none"
+        credentialless="true"
+        referrerpolicy="no-referrer"
+        width="700"
+        height="700">
+    </iframe> #}
+    <hr>
+    <footer>
+        {% if meta.tags %}
+        <ul class="horizontal">
+            Filed under
+            {% for tag in meta.tags %}
+            <li><a href="/search?tag={{tag}}"
+                    property="isPartOf">#{{tag}}</a></li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        <p>
+            Created <time property="dateCreated"
+                class="dt-published"
+                datetime="{{meta.created}}">{{meta.created}}</time>{% if meta.created != meta.updated %}; updated <time property="dateModified"
+                datetime="{{meta.updated}}">{{meta.updated}}{% endif %}.
+        </p>
+    </footer>
+</main>
+{% endblock main %}

@@ -50,7 +50,7 @@ typeof="BlogPosting"
         <ul class="horizontal">
             Filed under
             {% for tag in meta.tags %}
-            <li><a href="/tags?tags={{tag}}"
+            <li><a href="/search?tag={{tag}}"
                     property="isPartOf">#{{tag}}</a></li>
             {% endfor %}
         </ul>

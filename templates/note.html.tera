@@ -1,1 +1,54 @@
 {% extends "article.html.tera" %}
+
+{% block main %}
+<main class="h-entry">
+    <header hidden="from-humans">
+        <div hidden="true"
+            property="abstract"
+            class="p-summary">{{meta.blurb}}</div>
+        <span property="keywords"
+            hidden="true">{{meta.tags | join(sep=",")}}</span>
+        <a property="author"
+            rel="author"
+            class="p-author h-card"
+            hred="https://wolo.dev">Willow</a>
+        <a href="https://fed.brid.gy"
+            class="u-bridgy-fed"></a>
+    </header>
+    <h1>Note</h1>
+    <div class="e-content">
+        {% if meta.ready != true %}
+        <p><i>(this post isn't marked as ready, but it's allowed to render because we're in developer mode)</i></p>
+        {% endif %}
+        {{ meta.blurb }}
+    </div>
+    <hr>
+    <footer>
+        {% if meta.tags %}
+        <ul class="horizontal">
+            Filed under
+            {% for tag in meta.tags %}
+            <li><a href="/search?tag={{tag}}"
+                    property="isPartOf">#{{tag}}</a></li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        <p>
+            Created <time property="dateCreated"
+                class="dt-published"
+                datetime="{{meta.created}}">{{meta.created}}</time>{% if meta.created != meta.updated %}; updated <time property="dateModified"
+                datetime="{{meta.updated}}">{{meta.updated}}{% endif %}.
+        </p>
+        {% if meta.mentioners | length > 0 %}
+        <hr>
+        {{ meta.mentioners | length }} backlink(s) found by WebMention:
+        <ul>
+            {% for backlink in meta.mentioners %}
+            <li><a href="{{backlink}}"
+                    rel="nofollow">{{backlink}}</a></li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </footer>
+</main>
+{% endblock main %}
