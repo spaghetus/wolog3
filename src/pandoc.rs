@@ -100,10 +100,12 @@ async fn find_links(mut ast: Pandoc) -> Pandoc {
     if matches!(post_type, PostType::Note) && ast.meta.contains_key("title") {
         post_type = PostType::Article;
     }
-    ast.meta.insert(
-        "mentions".to_string(),
-        MetaValue::MetaList(mentions.into_iter().map(MetaValue::MetaString).collect()),
-    );
+    let mut mentions: Vec<_> = mentions.into_iter().map(MetaValue::MetaString).collect();
+    if let Some(MetaValue::MetaList(existing_mentions)) = ast.meta.get("mentions") {
+        mentions.extend(existing_mentions.iter().cloned());
+    }
+    ast.meta
+        .insert("mentions".to_string(), MetaValue::MetaList(mentions));
     ast.meta.insert(
         "post_type".to_string(),
         MetaValue::MetaString(post_type.to_string()),

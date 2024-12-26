@@ -173,11 +173,19 @@ pub async fn update_all(cfg: Arc<Config>, db: &Pool<Postgres>) -> sqlx::Result<(
 
 async fn update_posts(db: &Pool<Postgres>, cfg: Arc<Config>) -> Result<(), sqlx::Error> {
     let posts: Arc<_> =
-        query!(r#"SELECT path, updated as "updated: chrono::DateTime<Utc>" FROM posts"#)
+        query!(r#"SELECT path, updated as "updated: chrono::DateTime<Utc>", meta FROM posts"#)
             .fetch_all(db)
             .await?
             .into_iter()
-            .map(|r| (r.path, r.updated))
+            .map(|r| {
+                (
+                    r.path,
+                    (
+                        r.updated,
+                        serde_json::from_value::<ArticleMeta>(r.meta).ok(),
+                    ),
+                )
+            })
             .collect::<HashMap<_, _>>()
             .into();
     let root: Arc<str> = cfg.content_root.to_str().unwrap().into();
@@ -222,7 +230,7 @@ async fn update_posts(db: &Pool<Postgres>, cfg: Arc<Config>) -> Result<(), sqlx:
                     .filter(|(path, (trimmed, updated))| {
                         posts
                             .get(trimmed)
-                            .map(|cached| updated > cached)
+                            .map(|(cached, _)| updated > cached)
                             .unwrap_or(true)
                     })
                     .collect(),
@@ -236,12 +244,14 @@ async fn update_posts(db: &Pool<Postgres>, cfg: Arc<Config>) -> Result<(), sqlx:
     for (path, (trimmed, updated)) in files {
         let db = db.clone();
         let cfg = cfg.clone();
+        let posts = posts.clone();
         group.spawn(async move {
             let ast = pandoc::md_to_ast(&path).await?;
             let ast = pandoc::run_preproc_filters(&db, ast).await;
             let meta = ArticleMeta::try_from(&ast)
                 .inspect_err(|e| eprintln!("Failed to load meta from {path} with {e}"))
                 .ok()?;
+            let old_meta = posts.get(&trimmed).and_then(|(_, meta)| meta.as_ref());
             if !meta.ready && !cfg.develop {
                 eprintln!("Skip {path} since it's not ready and we're in production");
                 return Some(());
@@ -268,19 +278,17 @@ async fn update_posts(db: &Pool<Postgres>, cfg: Arc<Config>) -> Result<(), sqlx:
             .execute(&db)
             .await
             .ok()?;
-            for to_url in &meta.mentions {
-                match (cfg.enable_webmention, cfg.develop) {
-                    (_, true) => eprintln!("Can't send webmentions in development"),
-                    (false, _) => {}
-                    (true, false) => {
-                        tokio::spawn(send_webmention(
-                            db.clone(),
-                            cfg.clone(),
-                            path.clone(),
-                            to_url.clone(),
-                        ));
-                    }
-                }
+            for to_url in meta
+                .mentions
+                .iter()
+                .chain(old_meta.iter().flat_map(|m| m.mentions.iter()))
+            {
+                tokio::spawn(send_webmention(
+                    db.clone(),
+                    cfg.clone(),
+                    path.clone(),
+                    to_url.clone(),
+                ));
             }
             Some(())
         });
@@ -328,6 +336,7 @@ async fn send_webmention(
     from_path: String,
     to_url: String,
 ) -> Result<bool, String> {
+    tokio::time::sleep(Duration::seconds(30).to_std().unwrap()).await;
     if !cfg.enable_webmention {
         return Ok(false);
     }
@@ -343,6 +352,12 @@ async fn send_webmention(
         to_url.set_host(cfg.origin.host_str()).unwrap();
         to_url.set_scheme(cfg.origin.scheme()).unwrap();
     }
+    let Some(response) = reqwest::get(to_url.as_str()).await.ok() else {
+        return;
+    };
+    let Some(response) = response.text().await.ok() else {
+        return;
+    };
     // client = Client::default();
     // let mut from_url = Url::parse(&cfg.origin).expect("Configured origin isn't a real URL");
     // let mut callback_url = from_url.clone();
