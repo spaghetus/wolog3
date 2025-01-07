@@ -353,10 +353,10 @@ async fn send_webmention(
         to_url.set_scheme(cfg.origin.scheme()).unwrap();
     }
     let Some(response) = reqwest::get(to_url.as_str()).await.ok() else {
-        return;
+        return Ok(false);
     };
     let Some(response) = response.text().await.ok() else {
-        return;
+        return Ok(false);
     };
     // client = Client::default();
     // let mut from_url = Url::parse(&cfg.origin).expect("Configured origin isn't a real URL");
