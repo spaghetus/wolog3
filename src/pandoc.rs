@@ -9,7 +9,7 @@ use std::{
 
 use pandoc_ast::{Block, Format, Inline, MetaValue, MutVisitor, Pandoc};
 use serde_json::json;
-use sqlx::{Database, Pool, Postgres};
+use sqlx::{query, Database, Pool, Postgres};
 use tempfile::{tempfile, NamedTempFile, TempPath};
 use tera::{Context, Tera};
 use tokio::{io::AsyncWriteExt, runtime::Handle, sync::RwLock};
@@ -68,6 +68,7 @@ pub async fn run_postproc_filters(
     tera: &Arc<RwLock<Tera>>,
     ast: Pandoc,
 ) -> Pandoc {
+    let ast = include(db, tera, ast).await;
     let ast = frag_search_results(db, tera, ast).await;
     ast
 }
@@ -225,6 +226,90 @@ async fn frag_search_results(
         }
     }
     let mut visitor = FragSearchVisitor(Handle::current(), db.clone(), tera.clone());
+    let ast = tokio::task::spawn_blocking(move || {
+        visitor.walk_pandoc(&mut ast);
+        ast
+    })
+    .await
+    .unwrap();
+
+    ast
+}
+
+async fn include(db: &Pool<Postgres>, tera: &Arc<RwLock<Tera>>, mut ast: Pandoc) -> Pandoc {
+    #[derive(serde::Deserialize)]
+    struct Include {
+        src: String,
+        #[serde(default)]
+        headings: Vec<String>,
+    }
+    struct IncludeVisitor(Handle, Pool<Postgres>);
+    impl MutVisitor for IncludeVisitor {
+        fn visit_block(&mut self, block: &mut Block) {
+            self.walk_block(block);
+            if let Block::CodeBlock((_, classes, _), contents) = block {
+                if !classes.iter().any(|c| c == "include") {
+                    return;
+                }
+
+                let Ok(include_spec): Result<Include, _> = serde_yml::from_str(contents) else {
+                    eprintln!("Bad include block {contents}");
+                    return;
+                };
+
+                let Ok(Some(article)) = self.0.block_on(
+                    query!(
+                        r#"SELECT ast as "ast: sqlx::types::Json<pandoc_ast::Pandoc>" FROM posts WHERE path = $1"#,
+                        include_spec.src
+                    )
+                    .fetch_optional(&self.1),
+                ) else {
+                    eprintln!("Failing include block {contents}");
+                    return;
+                };
+                let article = article.ast;
+
+                let mut blocks = if include_spec.headings.is_empty() {
+                    article.blocks.clone()
+                } else {
+                    let mut taking = None;
+                    dbg!(&include_spec.headings);
+                    article
+                        .blocks
+                        .iter()
+                        .flat_map(|b| {
+                            dbg!(b);
+                            match (taking, b) {
+                                (Option::None, b @ Block::Header(level, (id, _, _), _))
+                                    if include_spec.headings.iter().any(|i| i == id) =>
+                                {
+                                    taking = Some(level);
+                                    Some(b)
+                                }
+                                (Some(tl), b @ Block::Header(level, (id, _, _), _))
+                                    if tl <= level
+                                        && !include_spec.headings.iter().any(|i| i == id) =>
+                                {
+                                    taking = None;
+                                    None
+                                }
+                                (Some(_), b) => Some(b),
+                                (Option::None, _) => None,
+                            }
+                            .cloned()
+                        })
+                        .collect()
+                };
+                blocks.push(Block::LineBlock(vec![vec![Inline::Link(
+                    Default::default(),
+                    vec![Inline::Str("(copied from another page)".to_string())],
+                    (format!("/post/{}", include_spec.src), String::new()),
+                )]]));
+                *block = Block::BlockQuote(blocks);
+            }
+        }
+    }
+    let mut visitor = IncludeVisitor(Handle::current(), db.clone());
     let ast = tokio::task::spawn_blocking(move || {
         visitor.walk_pandoc(&mut ast);
         ast
