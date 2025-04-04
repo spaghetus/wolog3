@@ -156,7 +156,18 @@ impl Display for Toc {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, strum::Display, FromFormField)]
+#[derive(
+    Serialize,
+    Deserialize,
+    Clone,
+    Copy,
+    Debug,
+    Default,
+    strum::Display,
+    FromFormField,
+    PartialEq,
+    Eq,
+)]
 pub enum PostType {
     #[default]
     Note,
@@ -526,6 +537,7 @@ pub async fn search(
             !search.exclude_paths.iter().any(|x| p.starts_with(x))
                 && search.created.contains(&m.created)
                 && search.updated.contains(&m.updated)
+                && search.post_type.map(|t| t == m.post_type).unwrap_or(true)
         })
         .collect();
     result.sort_by(search.sort_type.sort_fn());
