@@ -97,10 +97,11 @@ async fn find_links(mut ast: Pandoc) -> Pandoc {
     }
     let mut visitor = LinkVisitor(vec![], PostType::Note);
     visitor.walk_pandoc(&mut ast);
-    let LinkVisitor(mentions, mut post_type) = visitor;
+    let LinkVisitor(mut mentions, mut post_type) = visitor;
     if matches!(post_type, PostType::Note) && ast.meta.contains_key("title") {
         post_type = PostType::Article;
     }
+    mentions.push("https://fed.brid.gy/".to_string());
     let mut mentions: Vec<_> = mentions.into_iter().map(MetaValue::MetaString).collect();
     if let Some(MetaValue::MetaList(existing_mentions)) = ast.meta.get("mentions") {
         mentions.extend(existing_mentions.iter().cloned());

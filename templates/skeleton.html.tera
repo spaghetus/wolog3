@@ -87,6 +87,9 @@
             </section>
         </aside>
     </div>
+    <a class="u-bridgy-fed"
+        href="https://fed.brid.gy/"
+        hidden="from-humans"></a>
 </body>
 
 </html>

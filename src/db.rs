@@ -1,6 +1,8 @@
 use crate::{pandoc, Config};
 use chrono::{DateTime, Duration, NaiveDate, Utc};
+use dom_query::Document;
 use pandoc_ast::{Block, Inline, MetaValue, Pandoc};
+use reqwest::Client;
 use rocket::{
     form::FromForm,
     futures::StreamExt,
@@ -369,19 +371,32 @@ async fn send_webmention(
     let Some(response) = response.text().await.ok() else {
         return Ok(false);
     };
-    // client = Client::default();
-    // let mut from_url = Url::parse(&cfg.origin).expect("Configured origin isn't a real URL");
-    // let mut callback_url = from_url.clone();
-    // from_url.set_path(&from_path);
-    // callback_url.set_path("/webmention_callback");
-    // let to_url = webmention::endpoint_for(&client, &to_url).await?;
-    // let request = webmention::Request {
-    //     source: from_url,
-    //     target: to_url.clone(),
-    //     ..Default::default()
-    // };
-    // let _response = webmention::send(&client, &to_url, &request).await?;
-    Ok(false)
+    let wm_url = {
+        let doc = Document::from(response);
+        let element = doc.select("link[rel=webmention], a[rel=webmention]");
+        let wm_url = element.attr("href");
+        let Some(wm_url) = wm_url.as_deref() else {
+            return Ok(false);
+        };
+        let Ok(wm_url) = to_url.join(wm_url) else {
+            return Ok(false);
+        };
+        wm_url
+    };
+    let mut from_url = cfg.origin.clone();
+    let mut callback_url = cfg.origin.clone();
+    from_url.set_path(&from_path);
+    callback_url.set_path("/webmention_callback");
+    let client = Client::new();
+
+    client
+        .post(wm_url)
+        .header("Content-Type", "application/x-www-form-urlencoded")
+        .body(format!("source={from_url}\ntarget={to_url}\n"))
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(true)
 }
 
 pub async fn tags(db: &Pool<Postgres>) -> Result<BTreeSet<String>, sqlx::Error> {
