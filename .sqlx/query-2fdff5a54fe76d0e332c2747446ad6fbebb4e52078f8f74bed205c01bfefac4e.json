@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT from_url, last_mentioned, first_mentioned FROM incoming_mentions WHERE to_path = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "from_url",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "last_mentioned",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 2,
+        "name": "first_mentioned",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "2fdff5a54fe76d0e332c2747446ad6fbebb4e52078f8f74bed205c01bfefac4e"
+}

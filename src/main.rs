@@ -14,7 +14,7 @@ use rocket::{
     fs::{FileServer, Options},
     futures::FutureExt,
     http::{Accept, ContentType, HeaderMap, MediaType, QMediaType, Status},
-    response::content::RawHtml,
+    response::{self, content::RawHtml},
     Response, State,
 };
 use serde::Serialize;
@@ -64,6 +64,8 @@ struct Config {
     update_interval: u64,
     #[arg(short = 'A', long, env = "WOLOG_AUTHOR")]
     author: Option<String>,
+    #[arg(long)]
+    webmention_bans: Vec<String>,
 }
 
 #[rocket::main]
@@ -138,13 +140,14 @@ async fn page(
 ) -> Result<RawHtml<String>, String> {
     let path = path.to_string_lossy();
     let (ast, meta) = db::read_post(db, &path).await.ok_or("Post not found")?;
-    let content = run_postproc_filters(db, tera, ast).await;
+    let content = run_postproc_filters(db, tera, ast, path.as_ref()).await;
     let content = ast_to_html(content)
         .await
         .ok_or("Converting ast to html failed")?;
     if bare {
         return Ok(RawHtml(content));
     }
+    let mentioners = db::mentioners(db, path.as_ref()).await.unwrap_or_default();
     let content = tera
         .read()
         .await
@@ -153,6 +156,7 @@ async fn page(
             &context!({
                 "toc": meta.toc.iter().map(ToString::to_string).collect::<String>(),
                 "meta": &meta,
+                "mentioners": &mentioners,
                 "content": &content
             }),
         )
@@ -169,9 +173,9 @@ struct WebMention {
 #[post("/webmention", data = "<wm>")]
 async fn webmention(
     wm: Form<WebMention>,
-    cfg: &State<Config>,
+    cfg: &State<Arc<Config>>,
     db: &State<Pool<Postgres>>,
-) -> Result<(ContentType, String), (Status, String)> {
+) -> Result<&'static str, (Status, String)> {
     use reqwest::Url;
     let WebMention { source, target } = wm.into_inner();
     let source =
@@ -196,11 +200,49 @@ async fn webmention(
             "Target URL should be one of our pages".to_string(),
         ));
     }
-    let path = target.path().trim_end_matches("/").trim_end_matches(".md");
-    todo!();
+    let Some(path) = target
+        .path()
+        .trim_end_matches("/")
+        .trim_end_matches(".md")
+        .get("/post/".len()..)
+    else {
+        return Err((Status::BadRequest, "You can only mention posts".to_string()));
+    };
+
+    let client = reqwest::ClientBuilder::new()
+        .timeout(Duration::from_millis(300))
+        .build()
+        .unwrap();
+    let Ok(response) = client.get(source.clone()).send().await else {
+        return Err((
+            Status::BadRequest,
+            "Couldn't fetch the mentioning page".to_string(),
+        ));
+    };
+    if response.status() == StatusCode::NOT_FOUND || response.status() == StatusCode::GONE {
+        let _ = db::rm_webmention(db, &source, path).await;
+        return Err((
+            Status::BadRequest,
+            "The mentioning page is missing? (if we had it before, we've done our best to delete it)".to_string(),
+        ));
+    }
+    let Ok(response) = response.text().await else {
+        return Err((
+            Status::BadRequest,
+            "The mentioning page doesn't seem to be UTF-8?".to_string(),
+        ));
+    };
+    if !response.contains(target.as_str()) {
+        let _ = db::rm_webmention(db, &source, path).await;
+        return Err((
+            Status::BadRequest,
+            "The page doesn't mention us like you said it would? (if we had it before, we've deleted it)".to_string(),
+        ));
+    }
     db::get_webmention(db, &source, path)
         .await
         .map_err(|_| (Status::InternalServerError, "Database error".to_string()))?;
+    Ok("Looks OK! The webmention should be registered now.")
 }
 
 #[derive(Debug, Clone, Copy, Serialize)]

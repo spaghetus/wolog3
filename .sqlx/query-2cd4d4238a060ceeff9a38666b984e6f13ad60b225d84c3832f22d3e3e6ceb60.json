@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO incoming_mentions\n            VALUES ($1, $2, $3, $3)\n            ON CONFLICT (to_path, from_url)\n            DO UPDATE\n            SET last_mentioned = $3",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "2cd4d4238a060ceeff9a38666b984e6f13ad60b225d84c3832f22d3e3e6ceb60"
+}

@@ -1,6 +1,7 @@
 use std::{
+    collections::BTreeMap,
     fs::Permissions,
-    io::{stderr, stdin, stdout, Write},
+    io::{stderr, Write},
     os::unix::fs::PermissionsExt,
     path::Path,
     process::{Command, Stdio},
@@ -9,8 +10,8 @@ use std::{
 
 use pandoc_ast::{Block, Format, Inline, MetaValue, MutVisitor, Pandoc};
 use serde_json::json;
-use sqlx::{query, Database, Pool, Postgres};
-use tempfile::{tempfile, NamedTempFile, TempPath};
+use sqlx::{query, Pool, Postgres};
+use tempfile::NamedTempFile;
 use tera::{Context, Tera};
 use tokio::{io::AsyncWriteExt, runtime::Handle, sync::RwLock};
 use url::Url;
@@ -57,7 +58,7 @@ pub async fn ast_to_html(ast: Pandoc) -> Option<String> {
     Some(pandoc)
 }
 
-pub async fn run_preproc_filters(db: &Pool<Postgres>, ast: Pandoc) -> Pandoc {
+pub async fn run_preproc_filters(db: &Pool<Postgres>, ast: Pandoc, _path: &str) -> Pandoc {
     let ast = find_links(ast).await;
     let ast = dynamic(ast).await;
     ast
@@ -67,7 +68,9 @@ pub async fn run_postproc_filters(
     db: &Pool<Postgres>,
     tera: &Arc<RwLock<Tera>>,
     ast: Pandoc,
+    path: &str,
 ) -> Pandoc {
+    // let ast = attach_mentioners(db, ast, path).await;
     let ast = include(db, tera, ast).await;
     let ast = frag_search_results(db, tera, ast).await;
     ast
@@ -320,6 +323,29 @@ async fn include(db: &Pool<Postgres>, tera: &Arc<RwLock<Tera>>, mut ast: Pandoc)
     })
     .await
     .unwrap();
+
+    ast
+}
+
+async fn attach_mentioners(db: &Pool<Postgres>, mut ast: Pandoc, path: &str) -> Pandoc {
+    let MetaValue::MetaList(list) = ast
+        .meta
+        .entry("mentioners".to_string())
+        .or_insert(MetaValue::MetaList(vec![]))
+    else {
+        return ast;
+    };
+    dbg!(&list);
+
+    let Ok(mentions) = crate::db::mentioners(db, path).await else {
+        return ast;
+    };
+
+    list.extend(
+        mentions
+            .into_iter()
+            .map(|m| MetaValue::MetaString(m.from_url)),
+    );
 
     ast
 }

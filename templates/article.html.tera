@@ -61,15 +61,18 @@ typeof="BlogPosting"
                 datetime="{{meta.created}}">{{meta.created}}</time>{% if meta.created != meta.updated %}; updated <time property="dateModified"
                 datetime="{{meta.updated}}">{{meta.updated}}{% endif %}.
         </p>
-        {% if meta.mentioners | length > 0 %}
+        {% if mentioners | length > 0 %}
         <hr>
-        {{ meta.mentioners | length }} backlink(s) found by WebMention:
-        <ul>
-            {% for backlink in meta.mentioners %}
-            <li><a href="{{backlink}}"
-                    rel="nofollow">{{backlink}}</a></li>
+        {{ mentioners | length }} backlink(s) via WebMention:
+        <ol>
+            {% for backlink in mentioners %}
+            <li><a href="{{backlink.from_url}}"
+                    rel="nofollow">{{backlink.from_url}}</a>
+                {% if backlink.first_mentioned %}
+                at {{backlink.first_mentioned}}
+                {% endif %}</li>
             {% endfor %}
-        </ul>
+        </ol>
         {% endif %}
     </footer>
 </main>

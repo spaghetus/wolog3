@@ -3,22 +3,14 @@ use chrono::{DateTime, Duration, NaiveDate, Utc};
 use dom_query::Document;
 use pandoc_ast::{Block, Inline, MetaValue, Pandoc};
 use reqwest::Client;
-use rocket::{
-    form::FromForm,
-    futures::StreamExt,
-    http::hyper::Uri,
-    tokio::{self},
-};
+use rocket::tokio::{self};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sqlx::{query, types::Json, Pool, Postgres};
+use sqlx::{query, query_as, types::Json, Pool, Postgres};
 use std::{
     collections::{BTreeSet, HashMap, HashSet},
-    convert::Infallible,
-    default,
     fmt::Display,
     ops::{Bound, RangeBounds},
-    path::{Path, PathBuf},
     str::FromStr,
     sync::Arc,
     time::SystemTime,
@@ -237,10 +229,10 @@ async fn update_posts(db: &Pool<Postgres>, cfg: Arc<Config>) -> Result<(), sqlx:
                             )
                         })
                     })
-                    .inspect(|(path, (trimmed, _))| {
+                    .inspect(|(_path, (trimmed, _))| {
                         all_files.insert(trimmed.clone());
                     })
-                    .filter(|(path, (trimmed, updated))| {
+                    .filter(|(_path, (trimmed, updated))| {
                         posts
                             .get(trimmed)
                             .map(|(cached, _)| updated > cached)
@@ -260,7 +252,7 @@ async fn update_posts(db: &Pool<Postgres>, cfg: Arc<Config>) -> Result<(), sqlx:
         let posts = posts.clone();
         group.spawn(async move {
             let ast = pandoc::md_to_ast(&path).await?;
-            let ast = pandoc::run_preproc_filters(&db, ast).await;
+            let ast = pandoc::run_preproc_filters(&db, ast, &trimmed).await;
             let meta = ArticleMeta::try_from(&ast)
                 .inspect_err(|e| eprintln!("Failed to load meta from {path} with {e}"))
                 .ok()?;
@@ -373,7 +365,7 @@ async fn send_webmention(
     };
     let wm_url = {
         let doc = Document::from(response);
-        let element = doc.select("link[rel=webmention], a[rel=webmention]");
+        let element = doc.select_single("link[rel=webmention], a[rel=webmention]");
         let wm_url = element.attr("href");
         let Some(wm_url) = wm_url.as_deref() else {
             return Ok(false);
@@ -389,10 +381,13 @@ async fn send_webmention(
     callback_url.set_path("/webmention_callback");
     let client = Client::new();
 
+    let mut form = HashMap::new();
+    form.insert("source", from_url.as_str());
+    form.insert("target", to_url.as_str());
     client
         .post(wm_url)
         .header("Content-Type", "application/x-www-form-urlencoded")
-        .body(format!("source={from_url}\ntarget={to_url}\n"))
+        .form(&form)
         .send()
         .await
         .map_err(|e| e.to_string())?;
@@ -407,15 +402,52 @@ pub async fn get_webmention(
     let now = Utc::now();
     query!(
         "INSERT INTO incoming_mentions
-            VALUES ($1, $2, $3)
+            VALUES ($1, $2, $3, $3)
             ON CONFLICT (to_path, from_url)
             DO UPDATE
             SET last_mentioned = $3",
-        source.as_str(),
         path,
+        source.as_str(),
         now
-    );
-    todo!()
+    )
+    .execute(db)
+    .await?;
+    Ok(())
+}
+
+pub async fn rm_webmention(
+    db: &Pool<Postgres>,
+    source: &Url,
+    path: &str,
+) -> Result<(), sqlx::Error> {
+    let now = Utc::now();
+    query!(
+        "DELETE FROM incoming_mentions
+            WHERE from_url = $1
+            AND to_path = $2",
+        source.as_str(),
+        path
+    )
+    .execute(db)
+    .await?;
+    Ok(())
+}
+
+#[derive(Debug, Serialize)]
+pub struct Mention {
+    pub from_url: String,
+    pub last_mentioned: DateTime<Utc>,
+    pub first_mentioned: Option<DateTime<Utc>>,
+}
+
+pub async fn mentioners(db: &Pool<Postgres>, path: &str) -> Result<Vec<Mention>, sqlx::Error> {
+    query_as!(
+        Mention,
+        "SELECT from_url, last_mentioned, first_mentioned FROM incoming_mentions WHERE to_path = $1",
+        path
+    )
+    .fetch_all(db)
+    .await
 }
 
 pub async fn tags(db: &Pool<Postgres>) -> Result<BTreeSet<String>, sqlx::Error> {

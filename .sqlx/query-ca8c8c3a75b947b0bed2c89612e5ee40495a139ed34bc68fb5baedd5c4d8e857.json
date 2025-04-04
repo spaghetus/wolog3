@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM incoming_mentions\n            WHERE from_url = $1\n            AND to_path = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ca8c8c3a75b947b0bed2c89612e5ee40495a139ed34bc68fb5baedd5c4d8e857"
+}

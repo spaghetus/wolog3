@@ -28,6 +28,11 @@ in {
       description = "URL of the Wolog's database.";
     };
 
+    args = mkOption {
+      type = types.listOf types.str;
+      default = [];
+    };
+
     enableWebmention = mkOption {
       type = types.bool;
       default = true;
@@ -181,7 +186,7 @@ in {
               if cfg.enableWebmention
               then "-W"
               else ""
-            }
+            } ${builtins.concatStringsSep " " cfg.args}
           '';
           Restart = "always";
           BindReadOnlyPaths = "${cfg.articlesDir} ${cfg.assetsDir} ${cfg.templatesDir} ${cfg.staticDir} ${workdir}";
