@@ -399,6 +399,25 @@ async fn send_webmention(
     Ok(true)
 }
 
+pub async fn get_webmention(
+    db: &Pool<Postgres>,
+    source: &Url,
+    path: &str,
+) -> Result<(), sqlx::Error> {
+    let now = Utc::now();
+    query!(
+        "INSERT INTO incoming_mentions
+            VALUES ($1, $2, $3)
+            ON CONFLICT (to_path, from_url)
+            DO UPDATE
+            SET last_mentioned = $3",
+        source.as_str(),
+        path,
+        now
+    );
+    todo!()
+}
+
 pub async fn tags(db: &Pool<Postgres>) -> Result<BTreeSet<String>, sqlx::Error> {
     let results =
         query!(r#"SELECT (meta->'tags') as "tags: Json<Vec<String>>" FROM visible_posts"#)

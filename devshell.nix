@@ -19,7 +19,7 @@
       config.devshells.default = {
         imports = [
           "${inputs.devshell}/extra/language/c.nix"
-          "${inputs.devshell}/extra/language/rust.nix"
+          # "${inputs.devshell}/extra/language/rust.nix"
         ];
 
         devshell.packages = deps;

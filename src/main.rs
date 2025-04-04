@@ -8,6 +8,7 @@ use chrono::NaiveDate;
 use clap::Parser;
 use db::{PostType, Search, SortType};
 use pandoc::{ast_to_html, run_postproc_filters};
+use reqwest::StatusCode;
 use rocket::{
     form::{Form, FromFormField, ValueField},
     fs::{FileServer, Options},
@@ -159,9 +160,47 @@ async fn page(
     Ok(RawHtml(content))
 }
 
-#[post("/webmention")]
-async fn webmention() -> (ContentType, String) {
-    todo!()
+#[derive(FromForm)]
+struct WebMention {
+    pub source: String,
+    pub target: String,
+}
+
+#[post("/webmention", data = "<wm>")]
+async fn webmention(
+    wm: Form<WebMention>,
+    cfg: &State<Config>,
+    db: &State<Pool<Postgres>>,
+) -> Result<(ContentType, String), (Status, String)> {
+    use reqwest::Url;
+    let WebMention { source, target } = wm.into_inner();
+    let source =
+        Url::parse(&source).map_err(|_| (Status::BadRequest, "Bad source URL".to_string()))?;
+    if source.cannot_be_a_base() {
+        return Err((
+            Status::BadRequest,
+            "Source URL should be absolute".to_string(),
+        ));
+    }
+    let target =
+        Url::parse(&target).map_err(|_| (Status::BadRequest, "Bad target URL".to_string()))?;
+    if target.cannot_be_a_base() {
+        return Err((
+            Status::BadRequest,
+            "Target URL should be absolute".to_string(),
+        ));
+    }
+    if target.host() != cfg.origin.host() {
+        return Err((
+            Status::BadRequest,
+            "Target URL should be one of our pages".to_string(),
+        ));
+    }
+    let path = target.path().trim_end_matches("/").trim_end_matches(".md");
+    todo!();
+    db::get_webmention(db, &source, path)
+        .await
+        .map_err(|_| (Status::InternalServerError, "Database error".to_string()))?;
 }
 
 #[derive(Debug, Clone, Copy, Serialize)]
