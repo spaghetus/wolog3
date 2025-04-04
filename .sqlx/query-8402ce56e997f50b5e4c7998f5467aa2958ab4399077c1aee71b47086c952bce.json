@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT ast as \"ast: sqlx::types::Json<pandoc_ast::Pandoc>\" FROM posts WHERE path = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "ast: sqlx::types::Json<pandoc_ast::Pandoc>",
+        "type_info": "Jsonb"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "8402ce56e997f50b5e4c7998f5467aa2958ab4399077c1aee71b47086c952bce"
+}

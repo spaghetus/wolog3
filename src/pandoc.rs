@@ -281,14 +281,17 @@ async fn include(db: &Pool<Postgres>, tera: &Arc<RwLock<Tera>>, mut ast: Pandoc)
                             dbg!(b);
                             match (taking, b) {
                                 (Option::None, b @ Block::Header(level, (id, _, _), _))
-                                    if include_spec.headings.iter().any(|i| i == id) =>
+                                    if include_spec.headings.iter().any(|i| i.eq(id.as_str())) =>
                                 {
                                     taking = Some(level);
                                     Some(b)
                                 }
                                 (Some(tl), b @ Block::Header(level, (id, _, _), _))
                                     if tl <= level
-                                        && !include_spec.headings.iter().any(|i| i == id) =>
+                                        && !include_spec
+                                            .headings
+                                            .iter()
+                                            .any(|i| i.eq(id.as_str())) =>
                                 {
                                     taking = None;
                                     None
@@ -296,8 +299,8 @@ async fn include(db: &Pool<Postgres>, tera: &Arc<RwLock<Tera>>, mut ast: Pandoc)
                                 (Some(_), b) => Some(b),
                                 (Option::None, _) => None,
                             }
-                            .cloned()
                         })
+                        .cloned()
                         .collect()
                 };
                 blocks.push(Block::LineBlock(vec![vec![Inline::Link(
