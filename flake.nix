@@ -16,8 +16,8 @@
     nixpkgs,
     flake-parts,
     ...
-  }:
-    flake-parts.lib.mkFlake {inherit inputs;} {
+  }: let
+    perSystem = flake-parts.lib.mkFlake {inherit inputs;} {
       systems = [
         "x86_64-linux"
         "aarch64-linux"
@@ -84,39 +84,10 @@
           '';
         };
       };
-
-      # perSystem = {
-      #   system,
-      #   pkgs,
-      #   lib,
-      #   inputs',
-      #   ...
-      # }: let
-      #   cargo = builtins.fromTOML (builtins.readFile ./Cargo.toml);
-      #   pkg = pkgs.rustPlatform.buildRustPackage rec {
-      #     pname = cargo.package.name;
-      #     version = cargo.package.version;
-      #     nativeBuildInputs = [pkgs.pkg-config];
-      #     buildInputs = with pkgs; [openssl];
-      #     PKG_CONFIG_PATH = "${pkgs.openssl.dev}/lib/pkgconfig";
-      #     SQLX_OFFLINE = true;
-      #     src = pkgs.runCommand "src" {} ''
-      #       mkdir $out
-      #       cp -r ${./src} $out/src
-      #       cp -r ${./.sqlx} $out/.sqlx
-      #       cp -r ${./migrations} $out/migrations
-      #       cp -r ${./Cargo.toml} $out/Cargo.toml
-      #       cp -r ${./Cargo.lock} $out/Cargo.lock
-      #     '';
-      #     cargoLock = {
-      #       lockFile = ./Cargo.lock;
-      #     };
-      #   };
-      # in rec {
-      #   packages = {
-      #     wolog = pkg;
-      #     default = packages.wolog;
-      #   };
-      # };
+    };
+  in
+    perSystem
+    // {
+      hydraJobs.default."x86_64-linux" = perSystem.packages.x86_64-linux.default;
     };
 }
