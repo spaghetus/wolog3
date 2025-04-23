@@ -64,7 +64,7 @@
       }: let
         # If you dislike IFD, you can also generate it with `crate2nix generate`
         # on each dependency change and import it here with `import ./Cargo.nix`.
-        cargoNix = import ./Cargo.nix {};
+        cargoNix = import ./Cargo.nix {pkgs = pkgs;};
       in rec {
         checks = {
           rustnix = cargoNix.rootCrate.build.override {
