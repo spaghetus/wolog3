@@ -1,3 +1,4 @@
+mod cookies;
 mod db;
 mod pandoc;
 
