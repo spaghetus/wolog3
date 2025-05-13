@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use rocket::{
     http::Cookie,
     outcome::{IntoOutcome, Outcome},
@@ -8,9 +8,9 @@ use rocket::{
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize, Default, Clone)]
 pub struct ClientPersist {
-    pub viewed: HashMap<String, DateTime<Utc>>,
+    pub viewed: HashMap<String, NaiveDate>,
 }
 
 #[async_trait]

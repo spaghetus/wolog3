@@ -1,5 +1,5 @@
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, HashSet},
     fs::Permissions,
     io::{stderr, Write},
     os::unix::fs::PermissionsExt,
@@ -16,7 +16,10 @@ use tera::{Context, Tera};
 use tokio::{io::AsyncWriteExt, runtime::Handle, sync::RwLock};
 use url::Url;
 
-use crate::db::{PostType, Search};
+use crate::{
+    cookies::ClientPersist,
+    db::{PostType, Search},
+};
 
 pub async fn md_to_ast(file: &impl AsRef<Path>) -> Option<Pandoc> {
     let file = file.as_ref();
@@ -69,10 +72,11 @@ pub async fn run_postproc_filters(
     tera: &Arc<RwLock<Tera>>,
     ast: Pandoc,
     path: &str,
+    cookie: &ClientPersist,
 ) -> Pandoc {
     // let ast = attach_mentioners(db, ast, path).await;
     let ast = include(db, tera, ast).await;
-    let ast = frag_search_results(db, tera, ast).await;
+    let ast = frag_search_results(db, tera, ast, &cookie).await;
     ast
 }
 
@@ -190,8 +194,9 @@ async fn frag_search_results(
     db: &Pool<Postgres>,
     tera: &Arc<RwLock<Tera>>,
     mut ast: Pandoc,
+    cookie: &ClientPersist,
 ) -> Pandoc {
-    struct FragSearchVisitor(Handle, Pool<Postgres>, Arc<RwLock<Tera>>);
+    struct FragSearchVisitor(Handle, Pool<Postgres>, Arc<RwLock<Tera>>, ClientPersist);
     impl MutVisitor for FragSearchVisitor {
         fn visit_block(&mut self, block: &mut Block) {
             if let Block::CodeBlock((_, classes, _), contents) = block {
@@ -214,6 +219,11 @@ async fn frag_search_results(
                 let ctx = json!({
                     "articles": search,
                     "search_qs": search_url.query().unwrap_or(""),
+                    "cookie": &self.3,
+                    "new": search.iter().filter(|(path, meta)| {
+                        let Some(viewed) = self.3.viewed.get(path) else {return true};
+                        *viewed < meta.updated
+                    }).map(|(p, _)| p).collect::<HashSet<_>>(),
                     "search": search_spec,
                 });
                 let ctx = Context::from_serialize(ctx).unwrap();
@@ -229,7 +239,8 @@ async fn frag_search_results(
             }
         }
     }
-    let mut visitor = FragSearchVisitor(Handle::current(), db.clone(), tera.clone());
+    let mut visitor =
+        FragSearchVisitor(Handle::current(), db.clone(), tera.clone(), cookie.clone());
     let ast = tokio::task::spawn_blocking(move || {
         visitor.walk_pandoc(&mut ast);
         ast

@@ -235,6 +235,10 @@ ul.horizontal>li:not(:last-child)::after {
         overflow-y: scroll;
     }
 
+    div.cards>.new {
+        border-color: var(--font-accent);
+    }
+
     div.cards * {
         text-align: left;
     }

@@ -18,7 +18,7 @@
     </p>
 </article>
 {% elif meta.post_type == "Reply" %}
-<article class="h-entry reply">
+<article class="h-entry reply {% if path in new %}new{% endif %}">
     {% if meta.title == "Untitled Page" %}
     <h3>
         <a property="{{property}}"
@@ -56,7 +56,7 @@
     </ul>
 </article>
 {% elif meta.post_type == "Note" %}
-<article class="h-entry note">
+<article class="h-entry note {% if path in new %}new{% endif %}">
     {% if meta.title == "Untitled Page" %}
     <h3>
         <a property="{{property}}"
@@ -86,7 +86,7 @@
     </ul>
 </article>
 {% else %}
-<article class="h-entry article">
+<article class="h-entry article {% if path in new %}new{% endif %}">
     <h3>
         <a property="{{property}}"
             class="p-name"

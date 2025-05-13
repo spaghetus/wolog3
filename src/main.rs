@@ -5,8 +5,9 @@ mod pandoc;
 #[macro_use]
 extern crate rocket;
 
-use chrono::NaiveDate;
+use chrono::{NaiveDate, Utc};
 use clap::Parser;
+use cookies::ClientPersist;
 use db::{PostType, Search, SortType};
 use pandoc::{ast_to_html, run_postproc_filters};
 use reqwest::StatusCode;
@@ -14,7 +15,7 @@ use rocket::{
     form::{Form, FromFormField, ValueField},
     fs::{FileServer, Options},
     futures::FutureExt,
-    http::{Accept, ContentType, HeaderMap, MediaType, QMediaType, Status},
+    http::{Accept, ContentType, CookieJar, HeaderMap, MediaType, QMediaType, Status},
     response::{self, content::RawHtml},
     Response, State,
 };
@@ -22,7 +23,7 @@ use serde::Serialize;
 use serde_json::json;
 use sqlx::{migrate, Pool, Postgres};
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     ops::{Bound, Deref},
     path::PathBuf,
     str::FromStr,
@@ -122,8 +123,18 @@ async fn main() {
 async fn index(
     db: &State<Pool<Postgres>>,
     tera: &State<Arc<RwLock<Tera>>>,
+    cookie: ClientPersist,
+    jar: &CookieJar<'_>,
 ) -> Result<RawHtml<String>, String> {
-    page(db, tera, PathBuf::from_str("index").unwrap(), false).await
+    page(
+        db,
+        tera,
+        cookie,
+        jar,
+        PathBuf::from_str("index").unwrap(),
+        false,
+    )
+    .await
 }
 
 macro_rules! context {
@@ -136,19 +147,22 @@ macro_rules! context {
 async fn page(
     db: &State<Pool<Postgres>>,
     tera: &State<Arc<RwLock<Tera>>>,
+    mut cookie: ClientPersist,
+    jar: &CookieJar<'_>,
     path: PathBuf,
     bare: bool,
 ) -> Result<RawHtml<String>, String> {
     let path = path.to_string_lossy();
-    let (ast, meta) = db::read_post(db, &path).await.ok_or("Post not found")?;
-    let content = run_postproc_filters(db, tera, ast, path.as_ref()).await;
+    let path = path.trim_start_matches(['.', '/']).trim_end_matches(".md");
+    let (ast, meta) = db::read_post(db, path).await.ok_or("Post not found")?;
+    let content = run_postproc_filters(db, tera, ast, path, &cookie).await;
     let content = ast_to_html(content)
         .await
         .ok_or("Converting ast to html failed")?;
     if bare {
         return Ok(RawHtml(content));
     }
-    let mentioners = db::mentioners(db, path.as_ref()).await.unwrap_or_default();
+    let mentioners = db::mentioners(db, path).await.unwrap_or_default();
     let content = tera
         .read()
         .await
@@ -157,11 +171,16 @@ async fn page(
             &context!({
                 "toc": meta.toc.iter().map(ToString::to_string).collect::<String>(),
                 "meta": &meta,
+                "cookie": &cookie,
                 "mentioners": &mentioners,
                 "content": &content
             }),
         )
         .expect("Tera rendering failure");
+    cookie
+        .viewed
+        .insert(path.to_string(), Utc::now().date_naive());
+    jar.add(cookie);
     Ok(RawHtml(content))
 }
 
@@ -344,6 +363,7 @@ async fn tags(
 async fn search(
     search_form: SearchForm,
     db: &State<Pool<Postgres>>,
+    cookie: ClientPersist,
     tera: &State<Arc<RwLock<Tera>>>,
 ) -> Result<RawHtml<String>, (Status, String)> {
     let search: Search = (&search_form).into();
@@ -357,6 +377,11 @@ async fn search(
     let context = context!({
         "search": search_form,
         "articles": results,
+        "cookie": &cookie,
+        "new": results.iter().filter(|(path, meta)| {
+            let Some(viewed) = cookie.viewed.get(path) else {return true};
+            *viewed < meta.updated
+        }).map(|(p, _)| p).collect::<HashSet<_>>(),
         "search_qs": search_url.query().unwrap_or(""),
         "tags": tags
     });
