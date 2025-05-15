@@ -190,6 +190,7 @@ in {
           '';
           Restart = "always";
           BindReadOnlyPaths = "${cfg.articlesDir} ${cfg.assetsDir} ${cfg.templatesDir} ${cfg.staticDir} ${workdir}";
+          PrivateTmp = true;
           ProtectHome = "tmpfs";
         };
       };
