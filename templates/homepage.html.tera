@@ -15,11 +15,18 @@
 <p xmlns:cc="http://creativecommons.org/ns#"
     xmlns:dct="http://purl.org/dc/terms/"><a property="dct:title"
         rel="cc:attributionURL"
+        class="local"
         href="https://wolo.dev">the wolog</a> is licensed under <a href="https://creativecommons.org/licenses/by-nc/4.0/?ref=chooser-v1"
         target="_blank"
         rel="license noopener noreferrer"
         style="display:inline-block;">CC BY-NC 4.0</a>
     except where otherwise specified
+</p>
+<p>
+    <a href="https://github.com/catppuccin/palette">catppuccin</a>
+    colors used under the terms of the mit license,
+    <a href="http://vollkorn-typeface.com">vollkorn</a>
+    typeface used under the OFL
 </p>
 <hr>
 <p><b>read carefully!</b></p>
@@ -27,7 +34,7 @@
     by connecting to this website or allowing or instructing an agent to do the same on your behalf, you have entered into a legally binding agreement, on behalf of yourself and your current and former employer(s), to release the author from all obligations and restrictions arising from current and future non-negotiated agreements (hereafter "agreements"; including, but not limited to, end-user license, terms of service, shrinkwrap, clickwrap, browsewrap, confidentiality, non-disclosure, non-compete, and acceptable use agreements) between the author and your current and former employers, their partners, licensors, agents, and assigns, in perpetuity, without prejudice to ongoing rights and privileges conferred to the author by the former. you further represent that you have the authority to release the author from any agreements on behalf of your current and former employer(s). to opt out, send a notarized request containing your legal name, street address, and social security number by certified mail to 123 Elf Rd North Pole 88888 and it will be processed within 90 business years.
     <br>
     <br>
-    <i>also: i use a cookie to keep track of which pages you've viewed and when, so i can highlight new and updated pages. your jurisdiction probably doesn't even require me to write a notice for this, but i'm being extra careful.</i>
+    also: i use a cookie to keep track of which pages you've viewed and when, so i can highlight new and updated pages. your jurisdiction probably doesn't even require me to write a notice for this, but i'm being extra careful.
 </p>
 {% endblock license %}
 

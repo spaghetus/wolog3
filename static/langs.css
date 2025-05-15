@@ -1,0 +1,652 @@
+.kw {
+    color: var(--ctp-macchiato-mauve);
+    font-weight: bold;
+}
+
+.dv {
+    color: var(--ctp-macchiato-green);
+}
+
+.op {
+    color: var(--ctp-macchiato-pink);
+}
+
+.pp {
+    color: var(--ctp-macchiato-yellow);
+}
+
+.st {
+    color: var(--ctp-macchiato-green);
+}
+
+pre.sourceCode.abc:after {
+    content: 'abc'
+}
+
+pre.sourceCode.actionscript:after {
+    content: 'actionscript'
+}
+
+pre.sourceCode.ada:after {
+    content: 'ada'
+}
+
+pre.sourceCode.agda:after {
+    content: 'agda'
+}
+
+pre.sourceCode.apache:after {
+    content: 'apache'
+}
+
+pre.sourceCode.asn1:after {
+    content: 'asn1'
+}
+
+pre.sourceCode.asp:after {
+    content: 'asp'
+}
+
+pre.sourceCode.ats:after {
+    content: 'ats'
+}
+
+pre.sourceCode.awk:after {
+    content: 'awk'
+}
+
+pre.sourceCode.bash:after {
+    content: 'bash'
+}
+
+pre.sourceCode.bibtex:after {
+    content: 'bibtex'
+}
+
+pre.sourceCode.boo:after {
+    content: 'boo'
+}
+
+pre.sourceCode.c:after {
+    content: 'c'
+}
+
+pre.sourceCode.changelog:after {
+    content: 'changelog'
+}
+
+pre.sourceCode.clojure:after {
+    content: 'clojure'
+}
+
+pre.sourceCode.cmake:after {
+    content: 'cmake'
+}
+
+pre.sourceCode.coffee:after {
+    content: 'coffee'
+}
+
+pre.sourceCode.coldfusion:after {
+    content: 'coldfusion'
+}
+
+pre.sourceCode.comments:after {
+    content: 'comments'
+}
+
+pre.sourceCode.commonlisp:after {
+    content: 'commonlisp'
+}
+
+pre.sourceCode.cpp:after {
+    content: 'cpp'
+}
+
+pre.sourceCode.crystal:after {
+    content: 'crystal'
+}
+
+pre.sourceCode.cs:after {
+    content: 'cs'
+}
+
+pre.sourceCode.css:after {
+    content: 'css'
+}
+
+pre.sourceCode.curry:after {
+    content: 'curry'
+}
+
+pre.sourceCode.d:after {
+    content: 'd'
+}
+
+pre.sourceCode.dart:after {
+    content: 'dart'
+}
+
+pre.sourceCode.debiancontrol:after {
+    content: 'debiancontrol'
+}
+
+pre.sourceCode.default:after {
+    content: 'default'
+}
+
+pre.sourceCode.diff:after {
+    content: 'diff'
+}
+
+pre.sourceCode.djangotemplate:after {
+    content: 'djangotemplate'
+}
+
+pre.sourceCode.dockerfile:after {
+    content: 'dockerfile'
+}
+
+pre.sourceCode.dosbat:after {
+    content: 'dosbat'
+}
+
+pre.sourceCode.dot:after {
+    content: 'dot'
+}
+
+pre.sourceCode.doxygen:after {
+    content: 'doxygen'
+}
+
+pre.sourceCode.doxygenlua:after {
+    content: 'doxygenlua'
+}
+
+pre.sourceCode.dtd:after {
+    content: 'dtd'
+}
+
+pre.sourceCode.eiffel:after {
+    content: 'eiffel'
+}
+
+pre.sourceCode.elixir:after {
+    content: 'elixir'
+}
+
+pre.sourceCode.elm:after {
+    content: 'elm'
+}
+
+pre.sourceCode.email:after {
+    content: 'email'
+}
+
+pre.sourceCode.erlang:after {
+    content: 'erlang'
+}
+
+pre.sourceCode.fasm:after {
+    content: 'fasm'
+}
+
+pre.sourceCode.fortranfixed:after {
+    content: 'fortranfixed'
+}
+
+pre.sourceCode.fortranfree:after {
+    content: 'fortranfree'
+}
+
+pre.sourceCode.fsharp:after {
+    content: 'fsharp'
+}
+
+pre.sourceCode.gap:after {
+    content: 'gap'
+}
+
+pre.sourceCode.gcc:after {
+    content: 'gcc'
+}
+
+pre.sourceCode.glsl:after {
+    content: 'glsl'
+}
+
+pre.sourceCode.gnuassembler:after {
+    content: 'gnuassembler'
+}
+
+pre.sourceCode.go:after {
+    content: 'go'
+}
+
+pre.sourceCode.gpr:after {
+    content: 'gpr'
+}
+
+pre.sourceCode.graphql:after {
+    content: 'graphql'
+}
+
+pre.sourceCode.groovy:after {
+    content: 'groovy'
+}
+
+pre.sourceCode.hamlet:after {
+    content: 'hamlet'
+}
+
+pre.sourceCode.haskell:after {
+    content: 'haskell'
+}
+
+pre.sourceCode.haxe:after {
+    content: 'haxe'
+}
+
+pre.sourceCode.html:after {
+    content: 'html'
+}
+
+pre.sourceCode.idris:after {
+    content: 'idris'
+}
+
+pre.sourceCode.ini:after {
+    content: 'ini'
+}
+
+pre.sourceCode.isocpp:after {
+    content: 'isocpp'
+}
+
+pre.sourceCode.j:after {
+    content: 'j'
+}
+
+pre.sourceCode.java:after {
+    content: 'java'
+}
+
+pre.sourceCode.javadoc:after {
+    content: 'javadoc'
+}
+
+pre.sourceCode.javascript:after {
+    content: 'javascript'
+}
+
+pre.sourceCode.javascriptreact:after {
+    content: 'javascriptreact'
+}
+
+pre.sourceCode.json:after {
+    content: 'json'
+}
+
+pre.sourceCode.jsp:after {
+    content: 'jsp'
+}
+
+pre.sourceCode.julia:after {
+    content: 'julia'
+}
+
+pre.sourceCode.kotlin:after {
+    content: 'kotlin'
+}
+
+pre.sourceCode.latex:after {
+    content: 'latex'
+}
+
+pre.sourceCode.lex:after {
+    content: 'lex'
+}
+
+pre.sourceCode.lilypond:after {
+    content: 'lilypond'
+}
+
+pre.sourceCode.literatecurry:after {
+    content: 'literatecurry'
+}
+
+pre.sourceCode.literatehaskell:after {
+    content: 'literatehaskell'
+}
+
+pre.sourceCode.llvm:after {
+    content: 'llvm'
+}
+
+pre.sourceCode.lua:after {
+    content: 'lua'
+}
+
+pre.sourceCode.m4:after {
+    content: 'm4'
+}
+
+pre.sourceCode.makefile:after {
+    content: 'makefile'
+}
+
+pre.sourceCode.mandoc:after {
+    content: 'mandoc'
+}
+
+pre.sourceCode.markdown:after {
+    content: 'markdown'
+}
+
+pre.sourceCode.mathematica:after {
+    content: 'mathematica'
+}
+
+pre.sourceCode.matlab:after {
+    content: 'matlab'
+}
+
+pre.sourceCode.maxima:after {
+    content: 'maxima'
+}
+
+pre.sourceCode.mediawiki:after {
+    content: 'mediawiki'
+}
+
+pre.sourceCode.metafont:after {
+    content: 'metafont'
+}
+
+pre.sourceCode.mips:after {
+    content: 'mips'
+}
+
+pre.sourceCode.modelines:after {
+    content: 'modelines'
+}
+
+pre.sourceCode.modula2:after {
+    content: 'modula2'
+}
+
+pre.sourceCode.modula3:after {
+    content: 'modula3'
+}
+
+pre.sourceCode.monobasic:after {
+    content: 'monobasic'
+}
+
+pre.sourceCode.mustache:after {
+    content: 'mustache'
+}
+
+pre.sourceCode.nasm:after {
+    content: 'nasm'
+}
+
+pre.sourceCode.nim:after {
+    content: 'nim'
+}
+
+pre.sourceCode.nix:after {
+    content: 'nix'
+}
+
+pre.sourceCode.noweb:after {
+    content: 'noweb'
+}
+
+pre.sourceCode.objectivec:after {
+    content: 'objectivec'
+}
+
+pre.sourceCode.objectivecpp:after {
+    content: 'objectivecpp'
+}
+
+pre.sourceCode.ocaml:after {
+    content: 'ocaml'
+}
+
+pre.sourceCode.octave:after {
+    content: 'octave'
+}
+
+pre.sourceCode.opencl:after {
+    content: 'opencl'
+}
+
+pre.sourceCode.orgmode:after {
+    content: 'orgmode'
+}
+
+pre.sourceCode.pascal:after {
+    content: 'pascal'
+}
+
+pre.sourceCode.perl:after {
+    content: 'perl'
+}
+
+pre.sourceCode.php:after {
+    content: 'php'
+}
+
+pre.sourceCode.pike:after {
+    content: 'pike'
+}
+
+pre.sourceCode.postscript:after {
+    content: 'postscript'
+}
+
+pre.sourceCode.povray:after {
+    content: 'povray'
+}
+
+pre.sourceCode.powershell:after {
+    content: 'powershell'
+}
+
+pre.sourceCode.prolog:after {
+    content: 'prolog'
+}
+
+pre.sourceCode.protobuf:after {
+    content: 'protobuf'
+}
+
+pre.sourceCode.pure:after {
+    content: 'pure'
+}
+
+pre.sourceCode.purebasic:after {
+    content: 'purebasic'
+}
+
+pre.sourceCode.purescript:after {
+    content: 'purescript'
+}
+
+pre.sourceCode.python:after {
+    content: 'python'
+}
+
+pre.sourceCode.qml:after {
+    content: 'qml'
+}
+
+pre.sourceCode.r:after {
+    content: 'r'
+}
+
+pre.sourceCode.racket:after {
+    content: 'racket'
+}
+
+pre.sourceCode.raku:after {
+    content: 'raku'
+}
+
+pre.sourceCode.relaxng:after {
+    content: 'relaxng'
+}
+
+pre.sourceCode.relaxngcompact:after {
+    content: 'relaxngcompact'
+}
+
+pre.sourceCode.rest:after {
+    content: 'rest'
+}
+
+pre.sourceCode.rhtml:after {
+    content: 'rhtml'
+}
+
+pre.sourceCode.roff:after {
+    content: 'roff'
+}
+
+pre.sourceCode.ruby:after {
+    content: 'ruby'
+}
+
+pre.sourceCode.rust:after {
+    content: 'rust'
+}
+
+pre.sourceCode.sass:after {
+    content: 'sass'
+}
+
+pre.sourceCode.scala:after {
+    content: 'scala'
+}
+
+pre.sourceCode.scheme:after {
+    content: 'scheme'
+}
+
+pre.sourceCode.sci:after {
+    content: 'sci'
+}
+
+pre.sourceCode.scss:after {
+    content: 'scss'
+}
+
+pre.sourceCode.sed:after {
+    content: 'sed'
+}
+
+pre.sourceCode.sgml:after {
+    content: 'sgml'
+}
+
+pre.sourceCode.sml:after {
+    content: 'sml'
+}
+
+pre.sourceCode.spdxcomments:after {
+    content: 'spdxcomments'
+}
+
+pre.sourceCode.sql:after {
+    content: 'sql'
+}
+
+pre.sourceCode.sqlmysql:after {
+    content: 'sqlmysql'
+}
+
+pre.sourceCode.sqlpostgresql:after {
+    content: 'sqlpostgresql'
+}
+
+pre.sourceCode.stan:after {
+    content: 'stan'
+}
+
+pre.sourceCode.stata:after {
+    content: 'stata'
+}
+
+pre.sourceCode.swift:after {
+    content: 'swift'
+}
+
+pre.sourceCode.systemverilog:after {
+    content: 'systemverilog'
+}
+
+pre.sourceCode.tcl:after {
+    content: 'tcl'
+}
+
+pre.sourceCode.tcsh:after {
+    content: 'tcsh'
+}
+
+pre.sourceCode.terraform:after {
+    content: 'terraform'
+}
+
+pre.sourceCode.texinfo:after {
+    content: 'texinfo'
+}
+
+pre.sourceCode.toml:after {
+    content: 'toml'
+}
+
+pre.sourceCode.typescript:after {
+    content: 'typescript'
+}
+
+pre.sourceCode.verilog:after {
+    content: 'verilog'
+}
+
+pre.sourceCode.vhdl:after {
+    content: 'vhdl'
+}
+
+pre.sourceCode.xml:after {
+    content: 'xml'
+}
+
+pre.sourceCode.xorg:after {
+    content: 'xorg'
+}
+
+pre.sourceCode.xslt:after {
+    content: 'xslt'
+}
+
+pre.sourceCode.xul:after {
+    content: 'xul'
+}
+
+pre.sourceCode.yacc:after {
+    content: 'yacc'
+}
+
+pre.sourceCode.yaml:after {
+    content: 'yaml'
+}
+
+pre.sourceCode.zig:after {
+    content: 'zig'
+}
+
+pre.sourceCode.zsh:after {
+    content: 'zsh'
+}

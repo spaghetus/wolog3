@@ -1,0 +1,12 @@
+@font-face {
+    font-family: 'Vollkorn';
+    src: url(./Vollkorn-Regular.woff2);
+    font-optical-sizing: auto;
+    font-feature-settings: "onum", "pnum";
+}
+
+@font-face {
+    font-family: 'Fira Code';
+    src: url('/font/firacode.woff2');
+    font-feature-settings: "liga" 1, "clig" 1, "calt" 1, "kern" 1, "mark" 1;
+}

@@ -41,7 +41,7 @@ pub async fn md_to_ast(file: &impl AsRef<Path>) -> Option<Pandoc> {
 
 pub async fn ast_to_html(ast: Pandoc) -> Option<String> {
     let mut pandoc = tokio::process::Command::new("pandoc")
-        .args(["-fjson", "-thtml"])
+        .args(["-fjson", "-thtml", "--highlight-style", "kate"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .spawn()
