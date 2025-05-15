@@ -337,6 +337,7 @@ impl<'a> From<&'a SearchForm> for Search {
             title_filter: value.title_filter.clone(),
             sort_type: value.sort_type,
             limit: value.limit,
+            ignore_hidden: false,
             extra: tera::Value::Object(Default::default()),
         }
     }

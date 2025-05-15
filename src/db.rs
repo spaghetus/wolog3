@@ -531,6 +531,8 @@ pub struct Search {
     pub sort_type: SortType,
     #[serde(default)]
     pub limit: Option<u32>,
+    #[serde(default)]
+    pub ignore_hidden: bool,
     #[serde(flatten)]
     pub extra: Value,
 }
@@ -580,7 +582,7 @@ pub async fn search(
     search: &Search,
 ) -> Result<Vec<(String, ArticleMeta)>, sqlx::Error> {
     let result = query!(
-        r#"SELECT path as "path!", meta as "meta!" FROM visible_posts
+        r#"SELECT path as "path!", meta as "meta!" FROM posts
         WHERE path ^@ $1
         AND (meta->>'title') LIKE ('%'||$2||'%')
         AND (meta->'tags') @> $3
@@ -599,6 +601,7 @@ pub async fn search(
     let mut result: Vec<_> = result
         .into_iter()
         .filter_map(|r| Some((r.path, serde_json::from_value::<ArticleMeta>(r.meta).ok()?)))
+        .filter(|(_, m)| (!m.hidden) || search.ignore_hidden)
         .filter(|(p, m)| {
             !search.exclude_paths.iter().any(|x| p.starts_with(x))
                 && search.created.contains(&m.created)

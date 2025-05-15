@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT path as \"path!\", meta as \"meta!\" FROM visible_posts\n        WHERE path ^@ $1\n        AND (meta->>'title') LIKE ('%'||$2||'%')\n        AND (meta->'tags') @> $3\n        LIMIT $4",
+  "query": "SELECT path as \"path!\", meta as \"meta!\" FROM posts\n        WHERE path ^@ $1\n        AND (meta->>'title') LIKE ('%'||$2||'%')\n        AND (meta->'tags') @> $3\n        LIMIT $4",
   "describe": {
     "columns": [
       {
@@ -23,9 +23,9 @@
       ]
     },
     "nullable": [
-      true,
-      true
+      false,
+      false
     ]
   },
-  "hash": "f5a31e08ea34e5d1f22987f5b23bbc4cf100c3a1e8d450350e027080298a51b6"
+  "hash": "4761322f4c7d383683786eb5c8c212ae03b0b793e63b3f985ad6bd2c8fa76b26"
 }
