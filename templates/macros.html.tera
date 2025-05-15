@@ -1,6 +1,7 @@
 {% macro article_card(path, meta, property="hasPart") %}
 {% if meta.post_type == "Like" %}
-<article class="h-entry like highlight">
+<article class="h-entry like highlight"
+    style="{% if meta is containing("rowspan") %}grid-row-end: span {{meta.rowspan}};{% endif %}">
     <p>
         <a href="/post/{{ path }}">Like:</a>
         <a class="u-like-of"
@@ -8,7 +9,8 @@
     </p>
 </article>
 {% elif meta.post_type == "Repost" %}
-<article class="h-entry repost highlight">
+<article class="h-entry repost highlight"
+    style="{% if meta is containing("rowspan") %}grid-row-end: span {{meta.rowspan}};{% endif %}">
     <p>
         <a property="{{property}}"
             href="/post/{{ path }}">Repost:
@@ -18,7 +20,8 @@
     </p>
 </article>
 {% elif meta.post_type == "Reply" %}
-<article class="h-entry reply {% if path in new %}new{% endif %}">
+<article class="h-entry reply {% if path in new %}new{% endif %}"
+    style="{% if meta is containing("rowspan") %}grid-row-end: span {{meta.rowspan}};{% endif %}">
     {% if meta.title == "Untitled Page" %}
     <h3>
         <a property="{{property}}"
@@ -56,7 +59,8 @@
     </ul>
 </article>
 {% elif meta.post_type == "Note" %}
-<article class="h-entry note {% if path in new %}new{% endif %}">
+<article class="h-entry note {% if path in new %}new{% endif %}"
+    style="{% if meta is containing("rowspan") %}grid-row-end: span {{meta.rowspan}};{% endif %}">
     {% if meta.title == "Untitled Page" %}
     <h3>
         <a property="{{property}}"
@@ -86,7 +90,8 @@
     </ul>
 </article>
 {% else %}
-<article class="h-entry article {% if path in new %}new{% endif %}">
+<article class="h-entry article {% if path in new %}new{% endif %}"
+    style="{% if meta is containing("rowspan") %}grid-row-end: span {{meta.rowspan}};{% endif %}">
     <h3>
         <a property="{{property}}"
             class="p-name"
