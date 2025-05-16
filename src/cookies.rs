@@ -1,8 +1,9 @@
 use chrono::{DateTime, NaiveDate, Utc};
 use rocket::{
-    http::Cookie,
+    http::{private::cookie::Expiration, Cookie},
     outcome::{IntoOutcome, Outcome},
     request::{self, FromRequest},
+    time::{Duration, OffsetDateTime},
     Request,
 };
 use serde::{Deserialize, Serialize};
@@ -30,9 +31,12 @@ impl<'r> FromRequest<'r> for ClientPersist {
 
 impl From<ClientPersist> for Cookie<'static> {
     fn from(val: ClientPersist) -> Self {
-        Cookie::new(
+        let mut cookie = Cookie::new(
             "client_persist",
             serde_json::to_string(&val).unwrap_or_default(),
-        )
+        );
+        cookie.set_path("/");
+        cookie.make_permanent();
+        cookie
     }
 }
