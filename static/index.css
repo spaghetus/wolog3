@@ -74,11 +74,11 @@ html {
     }
 
     aside section.linjapona {
-        visibility: hidden;
+        display: none;
     }
 
     main:has(:lang(tok))~aside section.linjapona {
-        visibility: visible;
+        display: initial;
     }
 
     body:has(#enable-linja-pona:checked) :lang(tok) {
