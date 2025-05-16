@@ -25,8 +25,10 @@
 <p>
     <a href="https://github.com/catppuccin/palette">catppuccin</a>
     colors used under the terms of the mit license,
-    <a href="http://vollkorn-typeface.com">vollkorn</a>
-    typeface used under the OFL
+    <a href="http://vollkorn-typeface.com">vollkorn,</a>
+    <a href="https://github.com/tonsky/FiraCode">fira code,</a> and
+    <a href="https://musilili.net/linja-pona/">linja pona</a>
+    typefaces used under the OFL1.1
 </p>
 <hr>
 <p><b>read carefully!</b></p>

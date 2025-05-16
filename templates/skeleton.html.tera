@@ -44,6 +44,18 @@
             <section class="toc">
             </section>
             {% endblock toc %}
+            {% block linja_pona %}
+            <section class="linjapona">
+                <p>
+                    <input type="checkbox"
+                        name="enable-linja-pona"
+                        id="enable-linja-pona"
+                        checked>
+                    <label for="enable-linja-pona"
+                        lang="tok">sitelen pona</label>
+                </p>
+            </section>
+            {% endblock linja_pona %}
             <section>
                 {% block contact %}
                 <p>

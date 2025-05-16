@@ -73,8 +73,16 @@ html {
         color: var(--italic-color);
     }
 
-    :lang(tok) {
-        font-family: linja-pona;
+    aside section.linjapona {
+        visibility: hidden;
+    }
+
+    main:has(:lang(tok))~aside section.linjapona {
+        visibility: visible;
+    }
+
+    body:has(#enable-linja-pona:checked) :lang(tok) {
+        font-family: 'Linja Pona', 'Vollkorn';
     }
 
     div.sourceCode {
