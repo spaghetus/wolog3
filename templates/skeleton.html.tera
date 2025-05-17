@@ -53,6 +53,16 @@
                         checked>
                     <label for="enable-linja-pona"
                         lang="tok">sitelen pona</label>
+                    <br />
+                    <input type="checkbox"
+                        name="enable-toki-inli"
+                        id="enable-toki-inli"
+                        class="toki-inli"
+                        checked>
+                    <label for="enable-toki-inli"
+                        lang="tok"
+                        class="toki-inli"
+                        data-en="English translation">kama <span class="tp-loanword">Inli</span></label>
                 </p>
             </section>
             {% endblock linja_pona %}

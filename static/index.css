@@ -77,12 +77,30 @@ html {
         display: none;
     }
 
+    aside section.linjapona .toki-inli {
+        display: none;
+    }
+
     main:has(:lang(tok))~aside section.linjapona {
+        display: initial;
+    }
+
+    main:has(:lang(tok)[data-en])~aside section.linjapona .toki-inli {
         display: initial;
     }
 
     body:has(#enable-linja-pona:checked) :lang(tok) {
         font-family: 'Linja Pona', 'Vollkorn';
+    }
+
+    body:has(#enable-linja-pona:checked) :lang(tok).tp-loanword {
+        font-family: 'Vollkorn';
+    }
+
+    body:has(#enable-toki-inli:checked) :lang(tok)[data-en]::after {
+        font-family: 'Vollkorn';
+        content: "(" attr(data-en) ")";
+        margin-left: 0.5ch;
     }
 
     div.sourceCode {
