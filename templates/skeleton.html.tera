@@ -57,8 +57,7 @@
                     <input type="checkbox"
                         name="enable-toki-inli"
                         id="enable-toki-inli"
-                        class="toki-inli"
-                        checked>
+                        class="toki-inli">
                     <label for="enable-toki-inli"
                         lang="tok"
                         class="toki-inli"
