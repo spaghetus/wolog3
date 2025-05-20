@@ -114,7 +114,7 @@ in {
     };
 
     settings = mkOption {
-      type = toml.type;
+      type = (pkgs.formats.toml {}).type;
       default = {};
       description = ''
         Rocket configuration for the wolog.
