@@ -106,7 +106,7 @@ static PROVIDERS: LazyLock<DashMap<String, CoreProviderMetadata>> = LazyLock::ne
 pub struct OAuthProvider {
     pub client_id: String,
     pub client_secret: String,
-    pub issuer: Url,
+    pub issuer: String,
     pub scopes: Vec<String>,
 }
 
@@ -134,14 +134,16 @@ impl RocketGovernable<'_> for OAuthRateLimit {
     }
 }
 
-async fn provider(url: &Url) -> CoreProviderMetadata {
-    if let Some(p) = PROVIDERS.get(url.as_str()) {
+async fn provider(url_: &str) -> CoreProviderMetadata {
+    if let Some(p) = PROVIDERS.get(url_) {
         return p.value().clone();
     }
-    let provider = CoreProviderMetadata::discover_async(IssuerUrl::from_url(url.clone()), &*CLIENT)
+    let url = IssuerUrl::new(url_.to_string()).unwrap();
+    dbg!(&url);
+    let provider = CoreProviderMetadata::discover_async(url, &*CLIENT)
         .await
         .unwrap();
-    PROVIDERS.insert(url.to_string(), provider.clone());
+    PROVIDERS.insert(url_.to_string(), provider.clone());
     provider
 }
 
