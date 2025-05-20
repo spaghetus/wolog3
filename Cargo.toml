@@ -8,7 +8,7 @@ atom_syndication = "0.12.4"
 chrono = { version = "0.4.38", features = ["serde"] }
 clap = { version = "4.5.21", features = ["derive", "env"] }
 pandoc_ast = "0.8.6"
-rocket = { version = "0.5.1", features = ["json"] }
+rocket = { version = "0.5.1", features = ["json", "secrets"] }
 serde = { version = "1.0.210", features = ["derive"] }
 serde_json = "1.0.128"
 serde_yml = "0.0.12"
@@ -31,3 +31,9 @@ url = { version = "2.5.4", features = ["serde"] }
 tempfile = "3.14.0"
 reqwest = "0.12.9"
 dom_query = { version = "0.17.0", features = ["atomic"] }
+figment = { version = "0.10.19", features = ["toml", "env"] }
+openidconnect = "4.0.0"
+rocket-governor = { version = "0.2.0-rc.4", features = ["limit_info"] }
+toml = "0.8.22"
+dashmap = "6.1.0"
+tokio-stream = "0.1.17"

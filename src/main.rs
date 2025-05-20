@@ -1,5 +1,7 @@
 mod cookies;
 mod db;
+mod guestbook;
+mod oauth;
 mod pandoc;
 
 #[macro_use]
@@ -7,8 +9,13 @@ extern crate rocket;
 
 use chrono::{NaiveDate, Utc};
 use clap::Parser;
-use cookies::ClientPersist;
+use cookies::{ClientPersist, SecurePersist};
 use db::{PostType, Search, SortType};
+use figment::{
+    providers::{Env, Format, Toml},
+    Figment,
+};
+use oauth::OAuthProvider;
 use pandoc::{ast_to_html, run_postproc_filters};
 use reqwest::StatusCode;
 use rocket::{
@@ -19,7 +26,7 @@ use rocket::{
     response::{self, content::RawHtml},
     Response, State,
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sqlx::{migrate, Pool, Postgres};
 use std::{
@@ -34,45 +41,48 @@ use tera::Tera;
 use tokio::sync::RwLock;
 use url::Url;
 
-#[derive(clap::Parser, Serialize)]
+#[derive(Serialize, Deserialize, Clone)]
 struct Config {
-    #[arg(short, long, default_value = "./articles", env = "WOLOG_CONTENT_ROOT")]
     content_root: PathBuf,
-    #[arg(short, long, default_value = "./static", env = "WOLOG_STATIC_ROOT")]
     static_root: PathBuf,
-    #[arg(
-        short,
-        long,
-        default_value = "./articles/assets",
-        env = "WOLOG_ASSETS_ROOT"
-    )]
     assets_root: PathBuf,
-    #[arg(
-        short,
-        long,
-        default_value = "./templates/*.tera",
-        env = "WOLOG_TEMPLATES_ROOT"
-    )]
     templates_root: PathBuf,
-    #[arg(short, long, default_value = "https://wolo.dev/", env = "WOLOG_ORIGIN")]
     origin: Url,
-    #[arg(short = 'W', long)]
+    #[serde(default)]
     enable_webmention: bool,
-    #[arg(short, long, default_value = "false")]
+    #[serde(default)]
     develop: bool,
-    #[arg(long, env = "DATABASE_URL")]
     database_url: String,
-    #[arg(long, default_value = "60")]
     update_interval: u64,
-    #[arg(short = 'A', long, env = "WOLOG_AUTHOR")]
+    #[serde(default)]
     author: Option<String>,
-    #[arg(long)]
+    #[serde(default)]
     webmention_bans: Vec<String>,
+    #[serde(default)]
+    guestbook_bans: HashMap<String, HashSet<String>>,
+    #[serde(default)]
+    oauth_providers: HashMap<String, OAuthProvider>,
 }
 
 #[rocket::main]
 async fn main() {
-    let config = Arc::new(Config::parse());
+    let figment = Figment::new()
+        .merge(Toml::file("wolog.toml"))
+        .merge(Env::prefixed("WOLOG_").split("__"))
+        .join(figment::providers::Serialized::from(
+            json!({
+                "content_root": "./articles",
+                "static_root": "./static",
+                "assets_root": "./articles/assets",
+                "templates_root": "./templates/*.tera",
+                "origin": "https://wolo.dev/",
+                "update_interval": 60,
+                "database_url": std::env::var("DATABASE_URL").ok(),
+            }),
+            "default",
+        ));
+    let config: Arc<Config> = Arc::new(figment.extract().expect("Invalid config"));
+    dbg!(config.oauth_providers.keys().collect::<Vec<_>>());
     let db = Pool::<Postgres>::connect(&config.database_url)
         .await
         .expect("Connect to database");
@@ -114,6 +124,11 @@ async fn main() {
             "/",
             routes![index, page, tags, search, search_feed, webmention],
         )
+        .mount(
+            "/login",
+            routes![oauth::login, oauth::callback, oauth::clear, oauth::forgetme],
+        )
+        .mount("/guestbook", routes![guestbook::display, guestbook::sign,])
         .launch()
         .await
         .unwrap();
@@ -125,6 +140,7 @@ async fn index(
     tera: &State<Arc<RwLock<Tera>>>,
     cookie: ClientPersist,
     jar: &CookieJar<'_>,
+    config: &State<Arc<Config>>,
 ) -> Result<RawHtml<String>, String> {
     page(
         db,
@@ -133,10 +149,12 @@ async fn index(
         jar,
         PathBuf::from_str("index").unwrap(),
         false,
+        config,
     )
     .await
 }
 
+#[macro_export]
 macro_rules! context {
     ($c:tt) => {
         tera::Context::from_serialize(serde_json::json!($c)).unwrap()
@@ -151,6 +169,7 @@ async fn page(
     jar: &CookieJar<'_>,
     path: PathBuf,
     bare: bool,
+    config: &State<Arc<Config>>,
 ) -> Result<RawHtml<String>, String> {
     let path = path.to_string_lossy();
     let path = path.trim_start_matches(['.', '/']).trim_end_matches(".md");
@@ -163,17 +182,21 @@ async fn page(
         return Ok(RawHtml(content));
     }
     let mentioners = db::mentioners(db, path).await.unwrap_or_default();
+    let guestbook_size = db::guestbook_size(db, path).await.unwrap_or(0);
     let content = tera
         .read()
         .await
         .render(
             format!("{}.html.tera", meta.template).as_str(),
             &context!({
+                "path": path,
                 "toc": meta.toc.iter().map(ToString::to_string).collect::<String>(),
                 "meta": &meta,
                 "cookie": &cookie,
                 "mentioners": &mentioners,
-                "content": &content
+                "content": &content,
+                "guestbook_size": guestbook_size,
+                "has_oauth": !config.oauth_providers.is_empty()
             }),
         )
         .expect("Tera rendering failure");

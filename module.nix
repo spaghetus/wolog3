@@ -133,22 +133,42 @@ in {
         Give the Wolog the ability to run dynamic blocks as nobody via sudo
       '';
     };
+
+    extraWologSettings = mkOption {
+      type = types.toml;
+      default = {};
+      description = ''
+        Extra TOML data to insert into the Wolog configuration.
+      '';
+    };
   };
 
   config = let
-    settings = toml.generate "Rocket.toml" ({
+    rocketSettings = toml.generate "Rocket.toml" ({
         release = {
           port = cfg.port;
           address = cfg.address;
         };
       }
       // cfg.settings);
+    wologSettings = toml.generate "wolog.toml" ({
+        database_url = cfg.db-url;
+        content_root = cfg.articlesDir;
+        static_root = cfg.staticDir;
+        assets_root = cfg.assetsDir;
+        templates_root = "${cfg.templatesDir}/*.tera";
+        origin = cfg.origin;
+        develop = cfg.development;
+        enable_webmention = cfg.enableWebmention;
+      }
+      // cfg.extraWologSettings);
     workdir = stdenv.mkDerivation {
       name = "wolog-workdir";
       unpackPhase = "true";
       installPhase = ''
         mkdir -p $out
-        ln -s ${settings} $out/Rocket.toml
+        ln -s ${rocketSettings} $out/Rocket.toml
+        ln -s ${wologSettings} $out/wolog.toml
       '';
     };
     wolog = cfg.package + /bin/wolog;
@@ -160,14 +180,6 @@ in {
         wantedBy = ["multi-user.target"];
 
         path = [pkgs.pandoc];
-        environment = {
-          DATABASE_URL = cfg.db-url;
-          WOLOG_CONTENT_ROOT = cfg.articlesDir;
-          WOLOG_STATIC_ROOT = cfg.staticDir;
-          WOLOG_ASSETS_ROOT = cfg.assetsDir;
-          WOLOG_TEMPLATES_ROOT = "${cfg.templatesDir}/*.tera";
-          WOLOG_ORIGIN = cfg.origin;
-        };
 
         serviceConfig = {
           Type = "simple";
@@ -178,15 +190,7 @@ in {
           ExecStart = pkgs.writeScript "wolog-start" ''
             #!/bin/sh
             cd ${builtins.toString workdir}
-            ${wolog} ${
-              if cfg.development
-              then "-d"
-              else ""
-            } ${
-              if cfg.enableWebmention
-              then "-W"
-              else ""
-            } ${builtins.concatStringsSep " " cfg.args}
+            ${wolog} ${builtins.concatStringsSep " " cfg.args}
           '';
           Restart = "always";
           BindReadOnlyPaths = "${cfg.articlesDir} ${cfg.assetsDir} ${cfg.templatesDir} ${cfg.staticDir} ${workdir}";

@@ -61,6 +61,11 @@ typeof="BlogPosting"
                 datetime="{{meta.created}}">{{meta.created}}</time>{% if meta.created != meta.updated %}; updated <time property="dateModified"
                 datetime="{{meta.updated}}">{{meta.updated}}{% endif %}.
         </p>
+        {% if has_oauth %}
+        <p>
+            The <a href="/guestbook/{{path}}">guestbook</a> for this page is {{ guestbook_size }} entries long.
+        </p>
+        {% endif %}
         {% if mentioners | length > 0 %}
         <hr>
         {{ mentioners | length }} backlink(s) via WebMention:

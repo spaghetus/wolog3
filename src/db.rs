@@ -1,5 +1,5 @@
-use crate::{pandoc, Config};
-use chrono::{DateTime, Duration, NaiveDate, Utc};
+use crate::{oauth::Identity, pandoc, Config};
+use chrono::{DateTime, Duration, Local, NaiveDate, Utc};
 use dom_query::Document;
 use pandoc_ast::{Block, Inline, MetaValue, Pandoc};
 use reqwest::Client;
@@ -335,6 +335,20 @@ pub async fn read_post(db: &Pool<Postgres>, path: &str) -> Option<(Pandoc, Artic
     Some((ast, meta))
 }
 
+pub async fn read_post_meta(db: &Pool<Postgres>, path: &str) -> Option<ArticleMeta> {
+    let path = path.trim_start_matches(['.', '/']).trim_end_matches(".md");
+    let result = query!(r#"SELECT meta FROM posts WHERE path = $1"#, path)
+        .fetch_optional(db)
+        .await
+        .ok()??;
+    // If either of these fail, the schema has probably changed and we need to throw everything out
+    let Ok(meta) = serde_json::from_value(result.meta) else {
+        query!("DELETE FROM posts").execute(db).await.ok()?;
+        return None;
+    };
+    Some(meta)
+}
+
 async fn send_webmention(
     db: Pool<Postgres>,
     cfg: Arc<Config>,
@@ -611,4 +625,144 @@ pub async fn search(
         .collect();
     result.sort_by(search.sort_type.sort_fn());
     Ok(result)
+}
+
+pub async fn guestbook_size(db: &Pool<Postgres>, path: &str) -> Result<i64, sqlx::Error> {
+    let result = query!(
+        "SELECT COUNT(*) as count FROM guestbook WHERE post = $1",
+        path
+    )
+    .fetch_one(db)
+    .await?;
+    Ok(result.count.unwrap_or(0))
+}
+
+#[derive(Serialize)]
+pub struct Signature {
+    pub provider: String,
+    pub sub: String,
+    pub email: String,
+    pub name: String,
+    pub timestamp: DateTime<Local>,
+}
+
+pub async fn read_guestbook(
+    db: &Pool<Postgres>,
+    path: &str,
+) -> Result<Vec<Signature>, sqlx::Error> {
+    let result = query_as!(
+        Signature,
+        "SELECT guests.provider, guests.sub, guests.email, guests.name, guestbook.timestamp FROM guestbook INNER JOIN guests ON guestbook.guest = guests.sub WHERE post = $1 ORDER BY timestamp DESC",
+        path
+    )
+    .fetch_all(db)
+    .await?;
+    Ok(result)
+}
+
+pub async fn add_identity(
+    db: &Pool<Postgres>,
+    provider: &str,
+    identity: Identity,
+) -> Result<(), sqlx::Error> {
+    query!(
+        "INSERT INTO guests VALUES ($1, $2, $3, $4)
+            ON CONFLICT (provider, sub)
+            DO UPDATE SET
+                email = EXCLUDED.email,
+                name = EXCLUDED.name;",
+        provider,
+        identity.sub,
+        identity.email,
+        identity.name
+    )
+    .execute(db)
+    .await
+    .map(|_| ())
+}
+
+pub async fn get_identity(
+    db: &Pool<Postgres>,
+    provider: &str,
+    sub: &str,
+) -> Result<Option<Identity>, sqlx::Error> {
+    query_as!(
+        Identity,
+        "SELECT sub, email, name FROM guests WHERE provider = $1 AND sub = $2",
+        provider,
+        sub
+    )
+    .fetch_optional(db)
+    .await
+}
+
+pub async fn delete_identity(
+    db: &Pool<Postgres>,
+    provider: &str,
+    sub: &str,
+) -> Result<(), sqlx::Error> {
+    query!(
+        "DELETE FROM guests WHERE provider = $1 AND sub = $2",
+        provider,
+        sub
+    )
+    .execute(db)
+    .await
+    .map(|_| ())
+}
+
+pub async fn has_signed(
+    db: &Pool<Postgres>,
+    provider: &str,
+    sub: &str,
+) -> Result<bool, sqlx::Error> {
+    query!(
+        "SELECT COUNT(*) as c FROM guestbook WHERE provider = $1 AND guest = $2",
+        provider,
+        sub
+    )
+    .fetch_one(db)
+    .await
+    .map(|n| n.c.unwrap_or(0) > 0)
+}
+
+pub async fn sign_guestbook(
+    db: &Pool<Postgres>,
+    path: &str,
+    provider: &str,
+    sub: &str,
+) -> Result<(), sqlx::Error> {
+    query!(
+        "INSERT INTO guestbook VALUES ($1, $2, $3, $4)
+            ON CONFLICT (provider, guest, post)
+            DO UPDATE SET
+                timestamp = EXCLUDED.timestamp",
+        provider,
+        sub,
+        Utc::now(),
+        path
+    )
+    .execute(db)
+    .await
+    .map(|_| ())
+}
+
+pub async fn unsign_guestbook(
+    db: &Pool<Postgres>,
+    path: &str,
+    provider: &str,
+    sub: &str,
+) -> Result<(), sqlx::Error> {
+    query!(
+        "DELETE FROM guestbook
+        WHERE provider = $1
+        AND guest = $2
+        AND post = $3",
+        provider,
+        sub,
+        path
+    )
+    .execute(db)
+    .await
+    .map(|_| ())
 }

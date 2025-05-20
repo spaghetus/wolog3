@@ -1,0 +1,110 @@
+{% extends "main.html.tera" %}
+
+{% block head %}
+<title>Guestbook - {{meta.title}}</title>
+{% endblock head %}
+
+{% block main %}
+<main>
+    <h1>Guestbook for "{{meta.title}}"</h1>
+    <p>
+        <a href="/post/{{path}}">← Back to post</a>
+    </p>
+    <p>
+        {% if identities | length > 0 %}
+        You're logged in! You can log in again to update my copy of your information.
+        <a href="/login/clear">Click here</a> to log out of all of your identities. Your login cookie will still exist after doing this, but it will be empty.
+        {% else %}
+        You need to log in to sign the guestbook. This will create a cookie to keep track of your logged-in accounts. Logging in this way only gives me a trustworthy source of information about your identity - I will not be able to impersonate you or act on your behalf.
+        {% endif %}
+    </p>
+
+
+    {% if has_signed | length > 0 %}
+    <p>You've currently signed this page's guestbook with the following identities:</p>
+    <ul>
+        {% for provider in has_signed %}
+        <li>{{provider}}: {{identities | get(key=provider) | get(key="name")}}; {{identities | get(key=provider) | get(key="email")}}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+    <details>
+        <summary>Login</summary>
+        <ul>
+            {% for provider in providers %}
+            <li><a href="/login/challenge/{{provider}}">{{provider}}</a></li>
+            {% endfor %}
+        </ul>
+    </details>
+    {% if identities | length > 0 %}
+    <details>
+        <summary>Sign the guestbook</summary>
+        <p>
+            <strong>Let it be known!</strong>
+            Signing the guestbook will cause your unique ID, email address, and name to be stored permanently! Your name and the time of signature will also be shared publicly to anyone who checks the guestbook.
+            If you want me to dispose of all of the information that I can connect to your current browser session, <a href="/login/forgetme">click this link.</a>
+            Please let me know via the contact information on the sidebar if you would like information about you removed and this method doesn't work for you.
+        </p>
+        <details>
+            <summary>Currently stored information</summary>
+            <table>
+                <thead>
+                    <tr>
+                        <td>
+                            Provider
+                        <td>
+                            Name
+                        </td>
+                        <td>
+                            Email
+                        </td>
+                    </tr>
+                </thead>
+                {% for identity_id, identity in identities %}
+                <tr>
+                    <td>{{identity_id}}</td>
+                    <td>{{identities | get(key=identity_id) | get(key="name")}}</td>
+                    <td>{{identities | get(key=identity_id) | get(key="email")}}</td>
+                </tr>
+                {% endfor %}
+            </table>
+            </p>
+        </details>
+        <form method="post">
+            <label for="identity">Choose an identity:</label>
+            <select name="identity"
+                id="identity">
+                {% for identity_id, identity in identities %}
+                <option value="{{identity_id}}">{{identity_id}}: {{identity.name}}; {{identity.email}}</option>
+                {% endfor %}
+            </select>
+            <br>
+            <label for="do_sign">Sign (or un-sign):</label>
+            <input type="checkbox"
+                name="do_sign"
+                id="do_sign"
+                checked>
+            <br>
+            <input type="submit">
+        </form>
+    </details>
+    {% endif %}
+    <hr />
+    {% if guestbook | length > 0 %}
+    <table>
+        <thead>
+            <th>Name</th>
+            <th>Timestamp</th>
+        </thead>
+        {% for guest in guestbook %}
+        <tr>
+            <td>{{guest.name}}</td>
+            <td>{{guest.timestamp}}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <p>This page's guestbook is empty.</p>
+    {% endif %}
+</main>
+{% endblock main %}

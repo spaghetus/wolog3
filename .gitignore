@@ -5,3 +5,4 @@ articles/*
 .s.PGSQL*
 db.log
 .data/pids
+.env

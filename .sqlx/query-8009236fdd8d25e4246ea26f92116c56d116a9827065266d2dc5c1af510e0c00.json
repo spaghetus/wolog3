@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO guests VALUES ($1, $2, $3, $4)\n            ON CONFLICT (provider, sub)\n            DO UPDATE SET\n                email = EXCLUDED.email,\n                name = EXCLUDED.name;",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8009236fdd8d25e4246ea26f92116c56d116a9827065266d2dc5c1af510e0c00"
+}

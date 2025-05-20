@@ -1,0 +1,35 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT sub, email, name FROM guests WHERE provider = $1 AND sub = $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "sub",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "email",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "926091fcb9321d09073b9ee833de07be058dd8ae0cd9106f5bbb1c2249e693d9"
+}

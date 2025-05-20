@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM guestbook\n        WHERE provider = $1\n        AND guest = $2\n        AND post = $3",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "af813514b94e08ec4a360e59fcdd029fa1c362591255f058b10da9938fc01b93"
+}

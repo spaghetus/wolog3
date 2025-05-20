@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT COUNT(*) as c FROM guestbook WHERE provider = $1 AND guest = $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "c",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "9b90793ca73fcccd40e4349f638362485e9536a1b8cce0a35d00218b569cccdf"
+}

@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO guestbook VALUES ($1, $2, $3, $4)\n            ON CONFLICT (provider, guest, post)\n            DO UPDATE SET\n                timestamp = EXCLUDED.timestamp",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Timestamptz",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b7b33dedf9a0dc465cb02e98d2fee67bf5628803c216a93eafb326d1b7c9dcd2"
+}
