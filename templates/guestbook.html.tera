@@ -41,7 +41,7 @@
         <summary>Sign the guestbook</summary>
         <p>
             <strong>Let it be known!</strong>
-            Signing the guestbook will cause your unique ID, email address, and name to be stored permanently! Your name and the time of signature will also be shared publicly to anyone who checks the guestbook.
+            Signing the guestbook will cause your unique ID, email address, and name to be stored permanently! Your name and the time of signature will also be shared publicly to anyone who checks the guestbook. Your email won't be displayed publicly, but I might use it to contact you about an unacceptable name or (very sparingly!) with updates about the page you signed.
             If you want me to dispose of all of the information that I can connect to your current browser session, <a href="/login/forgetme">click this link.</a>
             Please let me know via the contact information on the sidebar if you would like information about you removed and this method doesn't work for you.
         </p>
