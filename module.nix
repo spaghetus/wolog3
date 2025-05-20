@@ -135,7 +135,7 @@ in {
     };
 
     extraWologSettings = mkOption {
-      type = types.toml;
+      type = (pkgs.formats.toml {}).type;
       default = {};
       description = ''
         Extra TOML data to insert into the Wolog configuration.
