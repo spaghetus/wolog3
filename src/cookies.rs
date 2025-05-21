@@ -1,6 +1,6 @@
 use chrono::{DateTime, NaiveDate, Utc};
 use rocket::{
-    http::{private::cookie::Expiration, Cookie},
+    http::{private::cookie::Expiration, Cookie, SameSite},
     outcome::{IntoOutcome, Outcome},
     request::{self, FromRequest},
     time::{Duration, OffsetDateTime},
@@ -70,6 +70,7 @@ impl From<SecurePersist> for Cookie<'static> {
             serde_json::to_string(&val).unwrap_or_default(),
         );
         cookie.set_path("/");
+        cookie.set_same_site(SameSite::Lax);
         cookie.make_permanent();
         cookie
     }
