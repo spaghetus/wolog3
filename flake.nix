@@ -30,7 +30,6 @@
 
       flake = {system, ...}: rec {
         overlays.default = final: prev: {
-          inherit final prev;
           wolog = self.packages."${final.system}".default;
         };
         nixosModules.default = import ./module.nix;
