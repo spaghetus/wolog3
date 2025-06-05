@@ -1,32 +1,28 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT path, updated as \"updated: chrono::DateTime<Utc>\", meta FROM posts",
+  "query": "SELECT updated as \"updated: chrono::DateTime<Utc>\", meta FROM posts WHERE path = $1",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
-        "name": "path",
-        "type_info": "Text"
-      },
-      {
-        "ordinal": 1,
         "name": "updated: chrono::DateTime<Utc>",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 2,
+        "ordinal": 1,
         "name": "meta",
         "type_info": "Jsonb"
       }
     ],
     "parameters": {
-      "Left": []
+      "Left": [
+        "Text"
+      ]
     },
     "nullable": [
-      false,
       false,
       false
     ]
   },
-  "hash": "0756e946f37979c15a7b5bef2cd288d6c62e858ddf2efd01f0a940109cc7c347"
+  "hash": "67ea0a9727a8a69c692bd07744aea8533fa0c7c01eb6f93fab5208d56d0594d7"
 }
