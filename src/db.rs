@@ -280,7 +280,7 @@ async fn update_posts(db: &Pool<Postgres>, cfg: &Config) -> color_eyre::Result<(
 		path: PathBuf,
 	) -> color_eyre::Result<()> {
 		let fs_path = cfg.content_root.join(&path);
-		if fs_path.is_file() && fs_path.extension() != Some(OsStr::new("md")) {
+		if fs_path.is_file() && fs_path.extension() == Some(OsStr::new("md")) {
 			let fs_path = fs_path.strip_prefix(&cfg.content_root).unwrap();
 			update_one(cfg, db, fs_path.to_str().unwrap()).await?;
 			return Ok(());
