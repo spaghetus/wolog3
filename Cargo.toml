@@ -37,3 +37,4 @@ rocket-governor = { version = "0.2.0-rc.4", features = ["limit_info"] }
 toml = "0.8.22"
 dashmap = "6.1.0"
 tokio-stream = "0.1.17"
+notify = "8.0.0"

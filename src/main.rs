@@ -16,12 +16,14 @@ use figment::{
 	providers::{Env, Format, Toml},
 	Figment,
 };
+use notify::{poll, EventKind, Watcher};
 use oauth::OAuthProvider;
 use pandoc::{ast_to_html, run_postproc_filters};
 use reqwest::StatusCode;
 use rocket::{
 	form::{Form, FromFormField, ValueField},
 	fs::{FileServer, Options},
+	futures::StreamExt,
 	http::{ContentType, CookieJar, Status},
 	response::content::RawHtml,
 	State,
@@ -64,8 +66,8 @@ struct Config {
 	oauth_providers: HashMap<String, OAuthProvider>,
 }
 
-#[rocket::main]
-async fn main() {
+#[rocket::launch]
+async fn launch() -> _ {
 	let figment = Figment::new()
 		.merge(Toml::file("wolog.toml"))
 		.merge(Env::prefixed("WOLOG_").split("__"))
@@ -92,22 +94,15 @@ async fn main() {
 	}));
 	tokio::spawn({
 		let db = db.clone();
-		let cfg = config.clone();
-		let tera = tera.clone();
-		tokio::time::sleep(Duration::from_millis(100)).await;
+		let config = config.clone();
 		async move {
-			let mut periodic = tokio::time::interval(Duration::from_secs(cfg.update_interval));
-			loop {
-				if let Err(e) = db::update_all(cfg.clone(), &db).await {
-					eprintln!("Error in periodic database update: {e}");
-				}
-				if let Err(e) = tera.write().await.full_reload() {
-					eprintln!("Error in periodic template reload: {e}");
-				}
-				periodic.tick().await;
+			if let Err(e) = db::update_all(config, &db).await {
+				eprintln!("Error in initial database update: {e}");
 			}
 		}
 	});
+	setup_watcher(&db, config.clone(), tera.clone());
+
 	rocket::build()
 		.manage(db)
 		.manage(tera.clone())
@@ -129,9 +124,99 @@ async fn main() {
 			routes![oauth::login, oauth::callback, oauth::clear, oauth::forgetme],
 		)
 		.mount("/guestbook", routes![guestbook::display, guestbook::sign,])
-		.launch()
-		.await
+}
+
+fn setup_watcher(db: &Pool<Postgres>, config: Arc<Config>, tera: Arc<RwLock<Tera>>) {
+	let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+	let mut inotify_watcher = Box::new(
+		notify::INotifyWatcher::new(
+			{
+				let tx = tx.clone();
+				move |e| {
+					if let Ok(e) = e {
+						tx.send(e).unwrap();
+					}
+				}
+			},
+			notify::Config::default().with_follow_symlinks(true),
+		)
+		.unwrap(),
+	);
+	let mut poll_watcher = Box::new(
+		notify::PollWatcher::new(
+			{
+				let tx = tx.clone();
+				move |e| {
+					if let Ok(e) = e {
+						tx.send(e).unwrap();
+					}
+				}
+			},
+			notify::Config::default()
+				.with_poll_interval(Duration::from_secs(config.update_interval)),
+		)
+		.unwrap(),
+	);
+	inotify_watcher
+		.watch(
+			&config.content_root.canonicalize().unwrap(),
+			notify::RecursiveMode::Recursive,
+		)
 		.unwrap();
+	poll_watcher
+		.watch(
+			&config.content_root.canonicalize().unwrap(),
+			notify::RecursiveMode::Recursive,
+		)
+		.unwrap();
+	Box::leak(inotify_watcher);
+	Box::leak(poll_watcher);
+	tokio::spawn({
+		let cfg = config.clone();
+		let db = db.clone();
+		let root_path = cfg
+			.content_root
+			.canonicalize()
+			.unwrap()
+			.to_str()
+			.unwrap()
+			.to_string();
+		async move {
+			loop {
+				let Some(event) = rx.recv().await else {
+					continue;
+				};
+				if !matches!(
+					event.kind,
+					EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_)
+				) {
+					continue;
+				}
+				for path in event.paths {
+					let Some(path) = path.to_str() else {
+						continue;
+					};
+					let path = path.trim_start_matches(&root_path);
+					if path.is_empty() {
+						continue;
+					}
+
+					if let Err(e) = db::update_one(&cfg, &db, path).await {
+						eprintln!("Error in initial database update: {e}");
+					};
+				}
+			}
+		}
+	});
+	tokio::spawn(async move {
+		let mut periodic = tokio::time::interval(Duration::from_secs(config.update_interval));
+		loop {
+			if let Err(e) = tera.write().await.full_reload() {
+				eprintln!("Error in periodic template reload: {e}");
+			}
+			periodic.tick().await;
+		}
+	});
 }
 
 #[get("/")]
@@ -171,8 +256,7 @@ async fn page(
 	bare: bool,
 	config: &State<Arc<Config>>,
 ) -> Result<RawHtml<String>, String> {
-	let path = path.to_string_lossy();
-	let path = path.trim_start_matches(['.', '/']).trim_end_matches(".md");
+	let path = &db::trim_path(&path);
 	let (ast, meta) = db::read_post(db, path).await.ok_or("Post not found")?;
 	let content = run_postproc_filters(db, tera, ast, path, &cookie).await;
 	let content = ast_to_html(content)

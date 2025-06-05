@@ -1,5 +1,6 @@
 use crate::{oauth::Identity, pandoc, Config};
 use chrono::{DateTime, Duration, Local, NaiveDate, Utc};
+use color_eyre::eyre;
 use dom_query::Document;
 use pandoc_ast::{Block, Inline, MetaValue, Pandoc};
 use reqwest::Client;
@@ -9,13 +10,16 @@ use serde_json::Value;
 use sqlx::{query, query_as, types::Json, Pool, Postgres};
 use std::{
 	collections::{BTreeSet, HashMap, HashSet},
+	ffi::OsStr,
 	fmt::Display,
 	ops::{Bound, RangeBounds},
+	path::{Path, PathBuf},
 	str::FromStr,
 	sync::Arc,
 	time::SystemTime,
 };
 use strum::EnumString;
+use tracing::instrument;
 use url::Url;
 use walkdir::WalkDir;
 
@@ -171,147 +175,139 @@ pub enum PostType {
 	Reply,
 }
 
-pub async fn update_all(cfg: Arc<Config>, db: &Pool<Postgres>) -> sqlx::Result<()> {
-	update_posts(db, cfg).await?;
+pub fn trim_path(path: &Path) -> String {
+	path.to_string_lossy()
+		.trim_start_matches(['.', '/'])
+		.trim_end_matches(".md")
+		.to_string()
+}
+
+pub async fn update_all(cfg: Arc<Config>, db: &Pool<Postgres>) -> color_eyre::Result<()> {
+	update_posts(db, &cfg).await?;
 	Ok(())
 }
 
-async fn update_posts(db: &Pool<Postgres>, cfg: Arc<Config>) -> Result<(), sqlx::Error> {
-	let posts: Arc<_> =
-		query!(r#"SELECT path, updated as "updated: chrono::DateTime<Utc>", meta FROM posts"#)
-			.fetch_all(db)
-			.await?
-			.into_iter()
-			.map(|r| {
-				(
-					r.path,
-					(
-						r.updated,
-						serde_json::from_value::<ArticleMeta>(r.meta).ok(),
-					),
-				)
-			})
-			.collect::<HashMap<_, _>>()
-			.into();
-	let root: Arc<str> = cfg.content_root.to_str().unwrap().into();
-	let (files, all_files): (HashMap<_, _>, HashSet<_>) = tokio::task::spawn_blocking({
-		let posts = posts.clone();
-		let cfg = cfg.clone();
-		let root = root.clone();
-		move || {
-			let mut all_files = HashSet::new();
-			(
-				WalkDir::new(&cfg.content_root)
-					.into_iter()
-					.flatten()
-					.filter(|f| {
-						!f.file_type().is_dir()
-							&& f.path()
-								.extension()
-								.and_then(|x| x.to_str())
-								.is_some_and(|x| x == "md")
-					})
-					.filter_map(|f| {
-						let modified = std::fs::metadata(f.path())
-							.and_then(|f| f.modified())
-							.unwrap_or_else(|_| SystemTime::now());
-						f.path().to_str().map(|f| {
-							(
-								f.to_string(),
-								(
-									f.trim_start_matches(&*root)
-										.trim_start_matches(['.', '/'])
-										.trim_end_matches(".md")
-										.to_string(),
-									DateTime::<Utc>::from(modified) - Duration::seconds(1),
-								),
-							)
-						})
-					})
-					.inspect(|(_path, (trimmed, _))| {
-						all_files.insert(trimmed.clone());
-					})
-					.filter(|(_path, (trimmed, updated))| {
-						posts
-							.get(trimmed)
-							.is_none_or(|(cached, _)| updated > cached)
-					})
-					.collect(),
-				all_files,
-			)
+#[instrument(skip(cfg, db))]
+pub async fn update_one(
+	cfg: &Config,
+	db: &Pool<Postgres>,
+	fs_path: &str,
+) -> Result<(), sqlx::Error> {
+	let path = trim_path(Path::new(fs_path));
+	let fs_path = cfg
+		.content_root
+		.join(fs_path.trim_start_matches('/'))
+		.canonicalize()
+		.unwrap();
+	let db_article = query!(
+		r#"SELECT updated as "updated: chrono::DateTime<Utc>", meta FROM posts WHERE path = $1"#,
+		path
+	)
+	.fetch_optional(db)
+	.await?;
+
+	let Ok(modified) = tokio::fs::metadata(&fs_path)
+		.await
+		.and_then(|m| m.modified())
+		.map(DateTime::<Utc>::from)
+	else {
+		// File has been removed, delete it
+		if db_article.is_some() {
+			query!("DELETE FROM posts WHERE path = $1", path)
+				.execute(db)
+				.await?;
 		}
-	})
-	.await
-	.expect("Failed to search for files");
-	let mut group = tokio::task::JoinSet::<Option<()>>::new();
-	for (path, (trimmed, updated)) in files {
-		let db = db.clone();
-		let cfg = cfg.clone();
-		let posts = posts.clone();
-		group.spawn(async move {
-			let ast = pandoc::md_to_ast(&path).await?;
-			let ast = pandoc::run_preproc_filters(&db, ast, &trimmed).await;
-			let meta = ArticleMeta::try_from(&ast)
-				.inspect_err(|e| eprintln!("Failed to load meta from {path} with {e}"))
-				.ok()?;
-			let old_meta = posts.get(&trimmed).and_then(|(_, meta)| meta.as_ref());
-			if !meta.ready && !cfg.develop {
-				eprintln!("Skip {path} since it's not ready and we're in production");
-				return Some(());
-			}
-			let ast = serde_json::to_value(&ast).ok()?;
-			let meta_json = serde_json::to_value(&meta).ok()?;
-			// let path = path
-			//     .trim_start_matches(&*root)
-			//     .trim_start_matches(['.', '/'])
-			//     .trim_end_matches(".md")
-			//     .to_string();
-			query!(
-				"INSERT INTO posts
+		return Ok(());
+	};
+
+	if db_article.is_some_and(|db_article| db_article.updated >= modified) {
+		// Database representation is up to date
+		return Ok(());
+	}
+
+	let Some(ast) = pandoc::md_to_ast(&fs_path).await else {
+		eprintln!("Malformed article {path}");
+		return Ok(());
+	};
+	let ast = pandoc::run_preproc_filters(db, ast, &path).await;
+	let Some(meta) = ArticleMeta::try_from(&ast)
+		.inspect_err(|e| eprintln!("Failed to load meta from {path} with {e}"))
+		.ok()
+	else {
+		return Ok(());
+	};
+	if !meta.ready && !cfg.develop {
+		eprintln!("Skip {path} since it's not ready and we're in production");
+		return Ok(());
+	}
+	let ast = serde_json::to_value(&ast).unwrap();
+	let meta_json = serde_json::to_value(&meta).unwrap();
+	query!(
+		"INSERT INTO posts
                     VALUES ($1, $2, $3, $4)
                     ON CONFLICT(path) DO UPDATE
                         SET updated = excluded.updated,
                             ast = excluded.ast,
                             meta = excluded.meta",
-				trimmed,
-				updated,
-				ast,
-				meta_json
-			)
-			.execute(&db)
-			.await
-			.ok()?;
-			for to_url in meta
-				.mentions
-				.iter()
-				.chain(old_meta.iter().flat_map(|m| m.mentions.iter()))
-			{
-				tokio::spawn(send_webmention(
-					db.clone(),
-					cfg.clone(),
-					path.clone(),
-					to_url.clone(),
-				));
-			}
-			Some(())
-		});
+		path,
+		modified,
+		ast,
+		meta_json
+	)
+	.execute(db)
+	.await?;
+	// for to_url in meta
+	// 	.mentions
+	// 	.iter()
+	// 	.chain(old_meta.iter().flat_map(|m| m.mentions.iter()))
+	// {
+	// 	tokio::spawn(send_webmention(
+	// 		db.clone(),
+	// 		cfg.clone(),
+	// 		path.clone(),
+	// 		to_url.clone(),
+	// 	));
+	// }
+	Ok(())
+}
+
+#[instrument(skip_all)]
+async fn update_posts(db: &Pool<Postgres>, cfg: &Config) -> color_eyre::Result<()> {
+	#[instrument(skip(db, cfg))]
+	async fn update_walk(
+		db: &Pool<Postgres>,
+		cfg: &Config,
+		path: PathBuf,
+	) -> color_eyre::Result<()> {
+		let fs_path = cfg.content_root.join(&path);
+		if fs_path.is_file() && fs_path.extension() != Some(OsStr::new("md")) {
+			let fs_path = fs_path.strip_prefix(&cfg.content_root).unwrap();
+			update_one(cfg, db, fs_path.to_str().unwrap()).await?;
+			return Ok(());
+		}
+
+		if !fs_path.is_dir() {
+			return Ok(());
+		}
+
+		let mut listing = tokio::fs::read_dir(fs_path).await?;
+
+		while let Some(entry) = listing.next_entry().await? {
+			Box::pin(update_walk(db, cfg, path.join(entry.file_name()))).await?;
+		}
+		Ok(())
 	}
-	#[allow(clippy::unnecessary_to_owned)]
-	for path in posts
-		.keys()
-		.filter(|p| !all_files.contains(p.as_str()))
-		.cloned()
-	{
-		let db = db.clone();
-		group.spawn(async move {
-			query!("DELETE FROM posts WHERE path = $1", path)
-				.execute(&db)
-				.await
-				.ok()?;
-			Some(())
-		});
+	update_walk(db, cfg, PathBuf::new()).await?;
+
+	let existing_posts = query!("SELECT path FROM posts").fetch_all(db).await?;
+	for post in existing_posts {
+		let path = cfg.content_root.join(&post.path).with_extension("md");
+		if !path.exists() {
+			query!("DELETE FROM posts WHERE path = $1", post.path)
+				.execute(db)
+				.await?;
+		}
 	}
-	group.join_all().await;
 	Ok(())
 }
 
