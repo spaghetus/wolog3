@@ -194,11 +194,7 @@ pub async fn update_one(
 	fs_path: &str,
 ) -> Result<(), sqlx::Error> {
 	let path = trim_path(Path::new(fs_path));
-	let fs_path = cfg
-		.content_root
-		.join(fs_path.trim_start_matches('/'))
-		.canonicalize()
-		.unwrap();
+	let fs_path = cfg.content_root.join(fs_path.trim_start_matches('/'));
 	let db_article = query!(
 		r#"SELECT updated as "updated: chrono::DateTime<Utc>", meta FROM posts WHERE path = $1"#,
 		path

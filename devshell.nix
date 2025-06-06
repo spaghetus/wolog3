@@ -13,7 +13,7 @@
         openssl
         pandoc
         pkg-config
-        postgresql
+        postgresql_16
       ];
     in {
       config.devshells.default = {
