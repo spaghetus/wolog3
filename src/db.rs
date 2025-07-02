@@ -193,6 +193,9 @@ pub async fn update_one(
 	db: &Pool<Postgres>,
 	fs_path: &str,
 ) -> Result<(), sqlx::Error> {
+	if !fs_path.ends_with(".md") {
+		return Ok(());
+	}
 	let path = trim_path(Path::new(fs_path));
 	let fs_path = cfg.content_root.join(fs_path.trim_start_matches('/'));
 	let db_article = query!(
