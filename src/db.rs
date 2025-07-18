@@ -228,7 +228,7 @@ pub async fn update_one(
 		eprintln!("Malformed article {path}");
 		return Ok(());
 	};
-	let ast = pandoc::run_preproc_filters(db, ast, &path).await;
+	let ast = pandoc::run_preproc_filters(db, ast, &path, cfg).await;
 	let Some(meta) = ArticleMeta::try_from(&ast)
 		.inspect_err(|e| eprintln!("Failed to load meta from {path} with {e}"))
 		.ok()

@@ -258,7 +258,7 @@ async fn page(
 ) -> Result<RawHtml<String>, String> {
 	let path = &db::trim_path(&path);
 	let (ast, meta) = db::read_post(db, path).await.ok_or("Post not found")?;
-	let content = run_postproc_filters(db, tera, ast, path, &cookie).await;
+	let content = run_postproc_filters(db, tera, ast, path, &cookie, config).await;
 	let content = ast_to_html(content)
 		.await
 		.ok_or("Converting ast to html failed")?;

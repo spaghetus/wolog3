@@ -19,6 +19,7 @@ use url::Url;
 use crate::{
 	cookies::ClientPersist,
 	db::{PostType, Search},
+	Config,
 };
 
 pub async fn md_to_ast(file: &impl AsRef<Path>) -> Option<Pandoc> {
@@ -61,10 +62,15 @@ pub async fn ast_to_html(ast: Pandoc) -> Option<String> {
 	Some(pandoc)
 }
 
-pub async fn run_preproc_filters(_db: &Pool<Postgres>, ast: Pandoc, _path: &str) -> Pandoc {
+pub async fn run_preproc_filters(
+	_db: &Pool<Postgres>,
+	ast: Pandoc,
+	_path: &str,
+	config: &Config,
+) -> Pandoc {
 	let ast = find_links(ast);
 
-	dynamic(ast).await
+	dynamic(ast, config)
 }
 
 pub async fn run_postproc_filters(
@@ -73,6 +79,7 @@ pub async fn run_postproc_filters(
 	ast: Pandoc,
 	_path: &str,
 	cookie: &ClientPersist,
+	config: &Config,
 ) -> Pandoc {
 	// let ast = attach_mentioners(db, ast, path).await;
 	let ast = include(db, tera, ast).await;
@@ -137,9 +144,11 @@ fn find_links(mut ast: Pandoc) -> Pandoc {
 	ast
 }
 
-async fn dynamic(mut ast: Pandoc) -> Pandoc {
-	struct DynamicVisitor;
-	impl MutVisitor for DynamicVisitor {
+fn dynamic(mut ast: Pandoc, config: &Config) -> Pandoc {
+	struct DynamicVisitor<'a> {
+		config: &'a Config,
+	}
+	impl<'a> MutVisitor for DynamicVisitor<'a> {
 		fn visit_block(&mut self, block: &mut Block) {
 			if let Block::CodeBlock((_, classes, attr), contents) = block {
 				if !classes.iter().any(|c| c == "dynamic") {
@@ -153,9 +162,8 @@ async fn dynamic(mut ast: Pandoc) -> Pandoc {
 				let mut file = NamedTempFile::new().unwrap();
 				file.write_all(contents.as_bytes()).unwrap();
 				file.flush().unwrap();
-				std::fs::set_permissions(&file, Permissions::from_mode(0o005)).unwrap();
-				let output = Command::new("sudo")
-					.args(["-u", "nobody", "-g", "nogroup", interpreter])
+				std::fs::set_permissions(&file, Permissions::from_mode(0o500)).unwrap();
+				let output = Command::new(interpreter)
 					.arg(file.path())
 					.stdin(Stdio::piped())
 					.stdout(Stdio::piped())
@@ -181,12 +189,8 @@ async fn dynamic(mut ast: Pandoc) -> Pandoc {
 			self.walk_block(block);
 		}
 	}
-	tokio::task::spawn_blocking(move || {
-		DynamicVisitor.walk_pandoc(&mut ast);
-		ast
-	})
-	.await
-	.unwrap()
+	(DynamicVisitor { config }).walk_pandoc(&mut ast);
+	ast
 }
 
 async fn frag_search_results(
