@@ -3,7 +3,8 @@
 {% block navlinks %}
 <ul>
     <li><a href="/">home</a></li>
-    <li><a href="/search">search</a></li>
+    <li><a href="/search"
+            rel="search">search</a></li>
     <li><a href="/tags">tags</a></li>
 </ul>
 {% endblock navlinks %}

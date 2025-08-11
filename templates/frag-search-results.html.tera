@@ -22,7 +22,7 @@
 {% if search.rss %}
 <a href="/feed?{{ search_qs }}"
     hidden="from-humans"
-    rel="alternate"
+    rel="search"
     type="application/atom+xml">Atom feed for this search</a>
 {% endif %}
 </p>

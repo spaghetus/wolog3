@@ -64,6 +64,8 @@ struct Config {
 	guestbook_bans: HashMap<String, HashSet<String>>,
 	#[serde(default)]
 	oauth_providers: HashMap<String, OAuthProvider>,
+	#[serde(default)]
+	markdown_extensions: Vec<String>,
 }
 
 #[rocket::launch]
@@ -80,6 +82,7 @@ async fn launch() -> _ {
 				"origin": "https://wolo.dev/",
 				"update_interval": 60,
 				"database_url": std::env::var("DATABASE_URL").ok(),
+				"markdown_extensions": [],
 			}),
 			"default",
 		));
@@ -403,6 +406,7 @@ struct SearchForm {
 	pub search_path: String,
 	pub exclude_path: Vec<String>,
 	pub tag: Vec<String>,
+	pub negative_tag: Vec<String>,
 	pub created_after: Option<DateField>,
 	pub created_before: Option<DateField>,
 	pub updated_after: Option<DateField>,
@@ -420,6 +424,7 @@ impl<'a> From<&'a SearchForm> for Search {
 			search_path: value.search_path.clone(),
 			exclude_paths: value.exclude_path.clone(),
 			tags: value.tag.clone(),
+			negative_tags: value.negative_tag.clone(),
 			post_type: value.post_type,
 			created: (
 				value

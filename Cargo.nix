@@ -17586,7 +17586,7 @@ rec {
       "wolog" = rec {
         crateName = "wolog";
         version = "0.3.3";
-        edition = "2021";
+        edition = "2024";
         crateBin = [
           {
             name = "wolog";

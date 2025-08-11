@@ -1,31 +1,33 @@
 use std::{
 	collections::HashSet,
 	fs::Permissions,
-	io::{stderr, Write},
+	io::{Write, stderr},
 	os::unix::fs::PermissionsExt,
 	path::Path,
 	process::{Command, Stdio},
 	sync::Arc,
 };
 
-use pandoc_ast::{Block, Format, Inline, MetaValue, MutVisitor, Pandoc};
+use pandoc_ast::{Attr, Block, Format, Inline, MetaValue, MutVisitor, Pandoc};
 use serde_json::json;
-use sqlx::{query, Pool, Postgres};
+use sqlx::{Pool, Postgres, query};
 use tempfile::NamedTempFile;
 use tera::{Context, Tera};
 use tokio::{io::AsyncWriteExt, runtime::Handle, sync::RwLock};
+use tracing::{instrument, warn};
 use url::Url;
 
 use crate::{
+	Config,
 	cookies::ClientPersist,
 	db::{PostType, Search},
-	Config,
 };
 
-pub async fn md_to_ast(file: &impl AsRef<Path>) -> Option<Pandoc> {
+pub async fn md_to_ast(file: &impl AsRef<Path>, config: &Config) -> Option<Pandoc> {
 	let file = file.as_ref();
 	let pandoc = tokio::process::Command::new("pandoc")
-		.args(["-fmarkdown", "-tjson"])
+		.arg(format!("-fmarkdown{}", config.markdown_extensions.join("")))
+		.arg("-tjson")
 		.arg(file.as_os_str())
 		.stdin(Stdio::null())
 		.stdout(Stdio::piped())
@@ -63,12 +65,13 @@ pub async fn ast_to_html(ast: Pandoc) -> Option<String> {
 }
 
 pub async fn run_preproc_filters(
-	_db: &Pool<Postgres>,
+	db: &Pool<Postgres>,
 	ast: Pandoc,
-	_path: &str,
+	path: &str,
 	config: &Config,
 ) -> Pandoc {
 	let ast = find_links(ast);
+	let ast = resolve_wikilinks(ast, db, path).await;
 
 	dynamic(ast, config)
 }
@@ -141,6 +144,74 @@ fn find_links(mut ast: Pandoc) -> Pandoc {
 			),
 		);
 	}
+	ast
+}
+
+#[instrument(skip(ast, db))]
+async fn resolve_wikilinks(mut ast: Pandoc, db: &Pool<Postgres>, path: &str) -> Pandoc {
+	struct WikilinkVisitor {
+		db: Pool<Postgres>,
+		path: String,
+		handle: Handle,
+		in_meta: bool,
+	}
+
+	impl MutVisitor for WikilinkVisitor {
+		fn visit_meta(&mut self, _key: &str, meta: &mut MetaValue) {
+			self.in_meta = true;
+			self.walk_meta(meta);
+			self.in_meta = false;
+		}
+		fn visit_inline(&mut self, inline: &mut Inline) {
+			if let Inline::Link(_, _, (target, t)) = inline
+				&& t == "wikilink"
+			{
+				let handle = Handle::current();
+				let Ok(matching) = self
+					.handle
+					.block_on(crate::db::match_wikilink(&self.db, target))
+				else {
+					return;
+				};
+				let [(destination, dest_meta), rest @ ..] = matching.as_slice() else {
+					error!(
+						"Link to {target} in {} doesn't have any potential destinations!",
+						self.path
+					);
+					*inline = Inline::Str("(Broken wikilink!)".to_string());
+					return;
+				};
+				if !rest.is_empty() {
+					warn!(
+						"Link to {target} in {} resolves to multiple potential articles {matching:?}; using {destination}",
+						self.path
+					);
+				}
+				*t = String::new();
+				if self.in_meta {
+					target.clone_from(destination);
+				} else {
+					*target = format!("/post/{destination}");
+				}
+				return;
+			}
+			self.walk_inline(inline);
+		}
+	}
+
+	let mut visitor = WikilinkVisitor {
+		db: db.clone(),
+		path: path.to_string(),
+		handle: Handle::current(),
+		in_meta: false,
+	};
+	let ast = tokio::task::spawn_blocking(move || {
+		visitor.walk_pandoc(&mut ast);
+		ast
+	})
+	.await
+	.unwrap();
+
 	ast
 }
 

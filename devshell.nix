@@ -44,6 +44,10 @@
               initdb -D .db;
             '';
           }
+          {
+            name = "database:sh";
+            command = "psql -h `pwd` -d wolog";
+          }
         ];
 
         serviceGroups.database.services.postgres = {

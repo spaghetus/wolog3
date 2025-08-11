@@ -422,3 +422,37 @@ a:hover {
 main img {
     max-width: 100%;
 }
+
+div.series {
+    display: block;
+    position: relative;
+    min-height: 1.375rem;
+}
+
+div.series .prev {
+    position: absolute;
+    left: 0;
+}
+
+div.series .next {
+    position: absolute;
+    right: 0;
+}
+
+div.series .up {
+    text-align: center;
+    display: block;
+}
+
+div.series .prev::before {
+    content: '← ';
+}
+
+div.series .next::after {
+    content: ' →';
+}
+
+div.series .up::before,
+div.series .up::after {
+    content: ' ↑ ';
+}

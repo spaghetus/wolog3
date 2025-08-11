@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT path, meta as \"meta: sqlx::types::Json<ArticleMeta>\" FROM posts WHERE CONCAT('/', path) LIKE (CONCAT('%/', $1::text))",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "path",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "meta: sqlx::types::Json<ArticleMeta>",
+        "type_info": "Jsonb"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "017a46ad9517920716a728e6918ead71408e524054e89e2c5e947e18151ac63b"
+}

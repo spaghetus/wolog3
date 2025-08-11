@@ -1,4 +1,4 @@
-use crate::{oauth::Identity, pandoc, Config};
+use crate::{Config, oauth::Identity, pandoc};
 use chrono::{DateTime, Duration, Local, NaiveDate, Utc};
 use color_eyre::eyre;
 use dom_query::Document;
@@ -7,7 +7,7 @@ use reqwest::Client;
 use rocket::tokio::{self};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sqlx::{query, query_as, types::Json, Pool, Postgres};
+use sqlx::{Pool, Postgres, query, query_as, types::Json};
 use std::{
 	collections::{BTreeSet, HashMap, HashSet},
 	ffi::OsStr,
@@ -25,6 +25,12 @@ use walkdir::WalkDir;
 
 const DEFAULT_TITLE: &dyn Fn() -> String = &|| "Untitled Page".to_string();
 const DEFAULT_TEMPLATE: &dyn Fn() -> String = &|| "article.html.tera".to_string();
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct Link {
+	link: String,
+	title: String,
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct ArticleMeta {
@@ -56,6 +62,12 @@ pub struct ArticleMeta {
 	pub mentioners: Vec<String>,
 	#[serde(default)]
 	pub mentions: Vec<String>,
+	#[serde(default)]
+	pub next: Option<Link>,
+	#[serde(default)]
+	pub prev: Option<Link>,
+	#[serde(default)]
+	pub up: Option<Link>,
 }
 
 impl TryFrom<&Pandoc> for ArticleMeta {
@@ -98,9 +110,21 @@ impl TryFrom<&Pandoc> for ArticleMeta {
 				}
 				MetaValue::MetaBool(b) => Value::Bool(b),
 				MetaValue::MetaString(s) => Value::String(s),
-				MetaValue::MetaInlines(i) => {
-					Value::String(i.iter().map(pandoc_inline_to_string).collect())
-				}
+				MetaValue::MetaInlines(i) => match i.as_slice() {
+					[Inline::Link(_, body, (link, kind))] if kind.is_empty() => {
+						let title = if body.is_empty() {
+							link.clone()
+						} else {
+							body.iter().map(pandoc_inline_to_string).collect()
+						};
+						serde_json::to_value(&Link {
+							link: link.clone(),
+							title,
+						})
+						.unwrap()
+					}
+					many => Value::String(many.iter().map(pandoc_inline_to_string).collect()),
+				},
 				MetaValue::MetaBlocks(b) => {
 					Value::String(b.iter().map(pandoc_block_to_string).collect())
 				}
@@ -193,7 +217,10 @@ pub async fn update_one(
 	db: &Pool<Postgres>,
 	fs_path: &str,
 ) -> Result<(), sqlx::Error> {
-	if !fs_path.ends_with(".md") {
+	if !std::path::Path::new(fs_path)
+		.extension()
+		.is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
+	{
 		return Ok(());
 	}
 	let path = trim_path(Path::new(fs_path));
@@ -224,7 +251,7 @@ pub async fn update_one(
 		return Ok(());
 	}
 
-	let Some(ast) = pandoc::md_to_ast(&fs_path).await else {
+	let Some(ast) = pandoc::md_to_ast(&fs_path, cfg).await else {
 		eprintln!("Malformed article {path}");
 		return Ok(());
 	};
@@ -461,12 +488,12 @@ pub struct Mention {
 
 pub async fn mentioners(db: &Pool<Postgres>, path: &str) -> Result<Vec<Mention>, sqlx::Error> {
 	query_as!(
-        Mention,
-        "SELECT from_url, last_mentioned, first_mentioned FROM incoming_mentions WHERE to_path = $1",
-        path
-    )
-    .fetch_all(db)
-    .await
+		Mention,
+		"SELECT from_url, last_mentioned, first_mentioned FROM incoming_mentions WHERE to_path = $1",
+		path
+	)
+	.fetch_all(db)
+	.await
 }
 
 pub async fn tags(db: &Pool<Postgres>) -> Result<BTreeSet<String>, sqlx::Error> {
@@ -539,6 +566,8 @@ pub struct Search {
 	#[serde(default)]
 	pub tags: Vec<String>,
 	#[serde(default)]
+	pub negative_tags: Vec<String>,
+	#[serde(default)]
 	pub post_type: Option<PostType>,
 	#[serde(default = "unbounded")]
 	pub created: Bounds<NaiveDate>,
@@ -569,6 +598,7 @@ impl<'a> From<&'a Search> for Url {
 					.map(|p| ("exclude_path", p.clone())),
 			)
 			.chain(val.tags.iter().map(|p| ("tag", p.clone())))
+			.chain(val.negative_tags.iter().map(|p| ("skip_tag", p.clone())))
 			.chain(match val.created.0 {
 				Bound::Unbounded => None,
 				Bound::Included(d) | Bound::Excluded(d) => Some(("created_after", d.to_string())),
@@ -636,6 +666,19 @@ pub async fn guestbook_size(db: &Pool<Postgres>, path: &str) -> Result<i64, sqlx
 	.fetch_one(db)
 	.await?;
 	Ok(result.count.unwrap_or(0))
+}
+
+pub async fn match_wikilink(
+	db: &Pool<Postgres>,
+	name: &str,
+) -> Result<Vec<(String, ArticleMeta)>, sqlx::Error> {
+	let result = query!(
+		r#"SELECT path, meta as "meta: sqlx::types::Json<ArticleMeta>" FROM posts WHERE CONCAT('/', path) LIKE (CONCAT('%/', $1::text))"#,
+		name
+	)
+	.fetch_all(db)
+	.await?;
+	Ok(result.into_iter().map(|v| (v.path, v.meta.0)).collect())
 }
 
 #[derive(Serialize)]

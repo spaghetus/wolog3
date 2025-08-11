@@ -113,3 +113,24 @@
 </article>
 {% endif %}
 {% endmacro article_card %}
+
+{% macro prevnext(meta) %}
+{% if meta.prev or meta.next or meta.up %}
+<div class="series">
+    {% if meta.prev %}
+    <a class="prev"
+        rel="prev"
+        href="/post/{{ meta.prev.link }}">{{ meta.prev.title }}</a>
+    {% endif %}
+    {% if meta.next %}
+    <a class="next"
+        rel="next"
+        href="/post/{{ meta.next.link }}">{{ meta.next.title }}</a>
+    {% endif %}
+    {% if meta.up %}
+    <a class="up"
+        href="/post/{{ meta.up.link }}">{{ meta.up.title }}</a>
+    {% endif %}
+</div>
+{% endif %}
+{% endmacro prevnext %}

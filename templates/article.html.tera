@@ -39,6 +39,7 @@ typeof="BlogPosting"
     </header>
     <div class="e-content">
         <h1>{{ meta.title }}</h1>
+        {{ macros::prevnext(meta=meta) }}
         {% if meta.ready != true %}
         <p><i>(this post isn't marked as ready, but it's allowed to render because we're in developer mode)</i></p>
         {% endif %}
@@ -46,6 +47,7 @@ typeof="BlogPosting"
     </div>
     <hr>
     <footer>
+        {{ macros::prevnext(meta=meta) }}
         {% if meta.tags %}
         <ul class="horizontal">
             Filed under
