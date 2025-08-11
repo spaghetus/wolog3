@@ -32,6 +32,7 @@ pub struct Link {
 	title: String,
 }
 
+#[serde_with::serde_as]
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct ArticleMeta {
 	#[serde(default = "DEFAULT_TITLE")]
@@ -63,10 +64,13 @@ pub struct ArticleMeta {
 	#[serde(default)]
 	pub mentions: Vec<String>,
 	#[serde(default)]
+	#[serde_as(deserialize_as = "serde_with::DefaultOnError")]
 	pub next: Option<Link>,
 	#[serde(default)]
+	#[serde_as(deserialize_as = "serde_with::DefaultOnError")]
 	pub prev: Option<Link>,
 	#[serde(default)]
+	#[serde_as(deserialize_as = "serde_with::DefaultOnError")]
 	pub up: Option<Link>,
 }
 
