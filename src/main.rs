@@ -13,24 +13,24 @@ use chrono::{NaiveDate, Utc};
 use cookies::ClientPersist;
 use db::{PostType, Search, SortType};
 use figment::{
-	providers::{Env, Format, Toml},
 	Figment,
+	providers::{Env, Format, Toml},
 };
-use notify::{poll, EventKind, Watcher};
+use notify::{EventKind, Watcher, poll};
 use oauth::OAuthProvider;
 use pandoc::{ast_to_html, run_postproc_filters};
 use reqwest::StatusCode;
 use rocket::{
+	State,
 	form::{Form, FromFormField, ValueField},
 	fs::{FileServer, Options},
 	futures::StreamExt,
 	http::{ContentType, CookieJar, Status},
 	response::content::RawHtml,
-	State,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use sqlx::{migrate, Pool, Postgres};
+use sqlx::{Pool, Postgres, migrate};
 use std::{
 	collections::{HashMap, HashSet},
 	ops::{Bound, Deref},
@@ -415,7 +415,7 @@ struct SearchForm {
 	#[field(default = SortType::CreateDesc)]
 	pub sort_type: SortType,
 	pub post_type: Option<PostType>,
-	pub limit: Option<u32>,
+	pub limit: Option<u16>,
 }
 
 impl<'a> From<&'a SearchForm> for Search {

@@ -578,7 +578,7 @@ pub struct Search {
 	#[serde(default)]
 	pub sort_type: SortType,
 	#[serde(default)]
-	pub limit: Option<u32>,
+	pub limit: Option<u16>,
 	#[serde(default)]
 	pub ignore_hidden: bool,
 	#[serde(flatten)]
@@ -635,11 +635,13 @@ pub async fn search(
         WHERE path ^@ $1
         AND (meta->>'title') LIKE ('%'||$2||'%')
         AND (meta->'tags') @> $3
+		AND NOT (meta->'tags' ?| $5)
         LIMIT $4"#,
 		search.search_path,
 		search.title_filter.as_ref().map_or("", String::as_str),
 		serde_json::to_value(&search.tags).unwrap(),
-		search.limit.unwrap_or(i32::MAX as u32) as i32,
+		search.limit.unwrap_or(u16::MAX) as i32,
+		&search.negative_tags,
 	)
 	.fetch_all(db)
 	.await?;
