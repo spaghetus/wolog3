@@ -5082,7 +5082,7 @@ dependencies = [
 
 [[package]]
 name = "wolog"
-version = "0.4.1"
+version = "0.4.2"
 dependencies = [
  "atom_syndication",
  "chrono",
