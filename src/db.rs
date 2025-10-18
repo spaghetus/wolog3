@@ -1,5 +1,5 @@
 use crate::{Config, oauth::Identity, pandoc};
-use chrono::{DateTime, Duration, Local, NaiveDate, Utc};
+use chrono::{DateTime, Days, Duration, Local, NaiveDate, Utc};
 use color_eyre::eyre;
 use dom_query::Document;
 use pandoc_ast::{Block, Inline, MetaValue, Pandoc};
@@ -533,6 +533,13 @@ fn unbounded<B>() -> Bounds<B> {
 	(Bound::Unbounded, Bound::Unbounded)
 }
 
+fn bound_value<B>(bound: Bound<B>) -> Option<B> {
+	match bound {
+		Bound::Included(b) | Bound::Excluded(b) => Some(b),
+		Bound::Unbounded => None,
+	}
+}
+
 #[derive(
 	Serialize, Deserialize, Default, Clone, Copy, Debug, EnumString, strum::Display, FromFormField,
 )]
@@ -636,29 +643,36 @@ pub async fn search(
 ) -> Result<Vec<(String, ArticleMeta)>, sqlx::Error> {
 	let result = query!(
 		r#"SELECT path as "path!", meta as "meta!" FROM posts
-        WHERE path ^@ $1
-        AND (meta->>'title') LIKE ('%'||$2||'%')
-        AND (meta->'tags') @> $3
+		WHERE path ^@ $1
+		AND (meta->>'title') LIKE ('%'||$2||'%')
+		AND (meta->'tags') @> $3
+		AND (meta->'updated')::text::date >= $6
+		AND (meta->'updated')::text::date <= $7
+		AND (meta->'created')::text::date >= $8
+		AND (meta->'created')::text::date <= $9
 		AND NOT (meta->'tags' ?| $5)
-        LIMIT $4"#,
+		AND ((NOT (meta->'hidden')::boolean) OR $10)
+		AND ($11 = (meta->'post_type')::text OR $11 IS NULL)
+		AND NOT path ^@ ANY($12)
+		LIMIT $4"#,
 		search.search_path,
 		search.title_filter.as_ref().map_or("", String::as_str),
 		serde_json::to_value(&search.tags).unwrap(),
-		search.limit.unwrap_or(u16::MAX) as i32,
+		i64::from(search.limit.unwrap_or(u16::MAX)),
 		&search.negative_tags,
+		bound_value(search.updated.0).unwrap_or(NaiveDate::from_ymd_opt(1969, 12, 31).unwrap()),
+		bound_value(search.updated.1).unwrap_or(Local::now().date_naive() + Days::new(10)),
+		bound_value(search.created.0).unwrap_or(NaiveDate::from_ymd_opt(1969, 12, 31).unwrap()),
+		bound_value(search.created.1).unwrap_or(Local::now().date_naive() + Days::new(10)),
+		search.ignore_hidden,
+		search.post_type.map(|p| p.to_string()),
+		&search.exclude_paths,
 	)
 	.fetch_all(db)
 	.await?;
 	let mut result: Vec<_> = result
 		.into_iter()
 		.filter_map(|r| Some((r.path, serde_json::from_value::<ArticleMeta>(r.meta).ok()?)))
-		.filter(|(_, m)| (!m.hidden) || search.ignore_hidden)
-		.filter(|(p, m)| {
-			!search.exclude_paths.iter().any(|x| p.starts_with(x))
-				&& search.created.contains(&m.created)
-				&& search.updated.contains(&m.updated)
-				&& search.post_type.is_none_or(|t| t == m.post_type)
-		})
 		.collect();
 	result.sort_by(search.sort_type.sort_fn());
 	Ok(result)
