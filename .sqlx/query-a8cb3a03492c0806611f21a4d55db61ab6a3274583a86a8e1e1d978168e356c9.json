@@ -1,0 +1,41 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT path as \"path!\", meta as \"meta!\" FROM posts\n\t\tWHERE path ^@ $1\n\t\tAND (meta->>'title') LIKE ('%'||$2||'%')\n\t\tAND (meta->'tags') @> $3\n\t\tAND (meta->'updated')::text::date >= $6\n\t\tAND (meta->'updated')::text::date <= $7\n\t\tAND (meta->'created')::text::date >= $8\n\t\tAND (meta->'created')::text::date <= $9\n\t\tAND NOT (meta->'tags' ?| $5)\n\t\tAND ((NOT (meta->'hidden')::boolean) OR $10)\n\t\tAND ($11 = (meta->'post_type')::text OR $11 IS NULL)\n\t\tAND NOT path ^@ ANY($12)\n\t\tORDER BY\n\t\t\tCASE WHEN $14 THEN (meta->$13) end asc,\n\t\t\tCASE WHEN NOT $14 THEN (meta->$13) end desc\n\t\tLIMIT $4",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "path!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "meta!",
+        "type_info": "Jsonb"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Jsonb",
+        "Int8",
+        "TextArray",
+        "Date",
+        "Date",
+        "Date",
+        "Date",
+        "Bool",
+        "Text",
+        "TextArray",
+        "Text",
+        "Bool"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "a8cb3a03492c0806611f21a4d55db61ab6a3274583a86a8e1e1d978168e356c9"
+}

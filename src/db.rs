@@ -654,6 +654,9 @@ pub async fn search(
 		AND ((NOT (meta->'hidden')::boolean) OR $10)
 		AND ($11 = (meta->'post_type')::text OR $11 IS NULL)
 		AND NOT path ^@ ANY($12)
+		ORDER BY
+			CASE WHEN $14 THEN (meta->$13) end asc,
+			CASE WHEN NOT $14 THEN (meta->$13) end desc
 		LIMIT $4"#,
 		search.search_path,
 		search.title_filter.as_ref().map_or("", String::as_str),
@@ -667,15 +670,22 @@ pub async fn search(
 		search.ignore_hidden,
 		search.post_type.map(|p| p.to_string()),
 		&search.exclude_paths,
+		match search.sort_type {
+			SortType::CreateAsc | SortType::CreateDesc => "created",
+			SortType::UpdateAsc | SortType::UpdateDesc => "updated",
+			SortType::NameAsc | SortType::NameDesc => "name",
+		},
+		match search.sort_type {
+			SortType::CreateAsc | SortType::UpdateAsc | SortType::NameAsc => true,
+			SortType::CreateDesc | SortType::UpdateDesc | SortType::NameDesc => false,
+		}
 	)
 	.fetch_all(db)
 	.await?;
-	let mut result: Vec<_> = result
+	Ok(result
 		.into_iter()
 		.filter_map(|r| Some((r.path, serde_json::from_value::<ArticleMeta>(r.meta).ok()?)))
-		.collect();
-	result.sort_by(search.sort_type.sort_fn());
-	Ok(result)
+		.collect())
 }
 
 pub async fn guestbook_size(db: &Pool<Postgres>, path: &str) -> Result<i64, sqlx::Error> {
