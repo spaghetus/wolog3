@@ -456,3 +456,7 @@ div.series .up::before,
 div.series .up::after {
     content: ' ↑ ';
 }
+
+a[href="mailto:banme@wolo.dev"] {
+    display: none;
+}

@@ -87,9 +87,13 @@
                     <li><a rel="me"
                             property="author"
                             href="https://discordapp.com/users/254656673484898314">discord</a></li>
-                    <li><u title="public@w.wolo.dev"
-                            class="looks-like-link">smtp</u> <!-- make it slightly less trivial for a scraper to pick up --></li>
+                    <li><a rel="me"
+                            property="author"
+                            href="mailto:public@w.wolo.dev">smtp</a> <!-- make it slightly less trivial for a scraper to pick up --></li>
                 </ul>
+                <a rel="me"
+                    property="author"
+                    href="mailto:banme@wolo.dev">smtp</a>
                 </p>
                 {% endblock contact %}
             </section>
